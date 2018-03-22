@@ -5,17 +5,13 @@
  */
 
 var mysql = require('mysql');
-//const connection = mysql.createConnection({
-//  host: '10.0.1.31',
-//  user: 'pvytas',
-//  password: 'eriglo2',
-//  database: 'db_mediportal_2017_11_28'
-//});
+
 
 var connection = mysql.createConnection({
-  host: '10.7.200.183',
+  host: '10.0.1.11',
+  port: '3307',
   user: 'bitnobi',
-  password: 'Bitnobi2017!',
+  password: 'bitnobi',
   database: 'db_mediportal'
 });
 
@@ -29,7 +25,7 @@ if(err){
   console.log('Connection established');
 });
 
-connection.query('SELECT * FROM users', function (err,rows) {
+connection.query('SELECT * FROM rtw_reasons', function (err,rows) {
   if(err) throw err;
 
   console.log('Data received from Db:\n');

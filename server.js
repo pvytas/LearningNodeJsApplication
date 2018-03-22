@@ -9,18 +9,19 @@ const app = express();
 
 
 function helloWorld(req, res) {
+  console.log('received request.');
   res.status(200).send('Hello World');
 };
 
 app.use('/', helloWorld);
 
-/*
-app.use('/', (req, res) => {
-  res.status(200).send('Hello World');
-});
-*/
 
-app.listen(3000);
+var server = app.listen(3000);
 console.log('Server running at http://localhost:3000/');
+
+//module.exports = app;
+
+app.set('server', server);
+
 
 module.exports = app;

@@ -4,5 +4,8 @@
     "keywords": ["util", "functional", "server", "client", "browser"],
     "author": "pvytas",
     "contributors": [],
-    "dependencies": {}
+    "dependencies": {},
+    "scripts": {
+        "test": "mocha"
+    }
 }
