@@ -13,16 +13,34 @@ MongoClient.connect("mongodb://localhost:27017/exampleDb", function(err, db) {
   if(err) { return console.dir(err); }
 
   var collection = db.collection('test');
-  var doc1 = {'hello':'doc1'};
-  var doc2 = {'hello':'doc2'};
-  var lotsOfDocs = [{'hello':'doc3'}, {'hello':'doc4'}];
+  
+//  var doc1 = {'hello':'doc1'};
+//  var doc2 = {'hello':'doc2'};
+//  var lotsOfDocs = [{'hello':'doc3'}, {'hello':'doc4'}];
+//  collection.insert(doc1);
+//
+//  collection.insert(doc2, {w:1}, function(err, result) {});
+//
+//  collection.insert(lotsOfDocs, {w:1}, function(err, result) {});
 
-  collection.insert(doc1);
+//   var nestedDocs = {'data': [{'hello':'doc5'}, {'hello':'doc6'} ]};
+//   collection.insert(nestedDocs, {w:1}, function(err, result) {});
+   
+   var expectedOutput1 = [ 
+  { data: {id: '1', column1: 'c2', column2: 'c3' },
+    startDate: new Date(2018, 3, 23),
+    endDate: new Date(9999, 5, 24, 11, 33, 30, 0) },
 
-  collection.insert(doc2, {w:1}, function(err, result) {});
+  { data: { id: '2', column1: 'c6', column2: 'c7' },
+    startDate: new Date(2018, 3, 23),
+    endDate: new Date(9999, 5, 24, 11, 33, 30, 0)  },
 
-  collection.insert(lotsOfDocs, {w:1}, function(err, result) {});
+  { data: { id: '3', column1: 'c10', column2: 'c11' },
+    startDate: new Date(2018, 3, 23),
+    endDate: new Date(9999, 5, 24, 11, 33, 30, 0)  } 
+];
 
+collection.insert(expectedOutput1, {w:1}, function(err, result) {});
 });
 
 

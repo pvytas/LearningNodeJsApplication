@@ -42,18 +42,16 @@ HandleBinlogEvents.prototype.getMongoCollectionName = function () {
  *  that can be persisted to a MongoDB collection.
  */
  
-HandleBinlogEvents.prototype.writeRows = function (event) {
+HandleBinlogEvents.prototype.filteredWriteRows = function (event) {
     var specs = this.persistenceSpecs;
     if (!specs.requireCurrentTable()) return;
     
     var output = [];
     event.rows.forEach(function(row) {
-        var rowOutput = { data: [] };
+        var rowOutput = { data: {} };
 
         Object.keys(row).forEach(function(name) {
           if (specs.requireColumn (name)) {
-              console.log('Column: %s, Type: %s, Value: %s', name, typeof row[name], row[name]);
- 
               rowOutput.data[name] = row[name];
           }
         });
@@ -66,6 +64,15 @@ HandleBinlogEvents.prototype.writeRows = function (event) {
     return (output);
 };
 
+
+HandleBinlogEvents.prototype.persistWriteRows = function (db, data) {
+    if (!data) return;   
+    var collectionName = this.persistenceSpecs.getMongoCollectionName();
+    if (!collectionName) return;
+    
+    var collection = db.collection(collectionName);
+    collection.insert(data, {w:1}, function(err, result) {});
+};
 
 
 module.exports = HandleBinlogEvents;

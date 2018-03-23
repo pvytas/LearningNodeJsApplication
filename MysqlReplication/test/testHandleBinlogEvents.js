@@ -5,7 +5,7 @@
 var assert = require("assert");
 var PersistenceSpecs = require ('../persistenceSpecs');
 var HandleBinlogEvents = require ('../handleBinlogEvents');
-
+var _ = require('lodash');
 
 var testSpecs = [
     {
@@ -48,15 +48,13 @@ var writeRowsEvent1 = {
             column2: 'c3', 
             column3: 'c4',
             column4: 'c5'
-        },
-                {
+        },{
             id: '2',
             column1: 'c6',
             column2: 'c7', 
             column3: 'c8',
             column4: 'c9'
-        },
-                {
+        }, {
             id: '3',
             column1: 'c10',
             column2: 'c11', 
@@ -67,14 +65,18 @@ var writeRowsEvent1 = {
 };
 
 var expectedOutput1 = [ 
-  { data: [ id: '1', column1: 'c2', column2: 'c3' ],
+  { data: {id: '1', column1: 'c2', column2: 'c3' },
+    startDate: new Date(2018, 3, 23),
     endDate: new Date(9999, 5, 24, 11, 33, 30, 0) },
 
-  { data: [ id: '2', column1: 'c6', column2: 'c7' ],
+  { data: { id: '2', column1: 'c6', column2: 'c7' },
+    startDate: new Date(2018, 3, 23),
     endDate: new Date(9999, 5, 24, 11, 33, 30, 0)  },
 
-  { data: [ id: '3', column1: 'c10', column2: 'c11' ],
-    endDate: new Date(9999, 5, 24, 11, 33, 30, 0)  } ];
+  { data: { id: '3', column1: 'c10', column2: 'c11' },
+    startDate: new Date(2018, 3, 23),
+    endDate: new Date(9999, 5, 24, 11, 33, 30, 0)  } 
+];
 
 
 //describe('test HandleBinlogEvents', function () {
@@ -94,17 +96,20 @@ var expectedOutput1 = [
 var h  = new HandleBinlogEvents();
 h.tableMap (tableMapEvent1);
 
-var output = h.writeRows(writeRowsEvent1);
-
+var output = h.filteredWriteRows(writeRowsEvent1);
+console.log ('raw output object');
 console.log (output);
 
 output.forEach(function(row) {
-    delete row.startDate;
-}
+    row.startDate = new Date(2018, 3, 23);
+});
 
+console.log ('startDate elements adjusted');
 console.log (output);
 
-
+console.log ('expected output:');
+console.log (expectedOutput1);
+console.log ('lodash deep comparison returns: ', _.isEqual (expectedOutput1, output));
 
 
 
