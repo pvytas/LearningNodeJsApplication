@@ -1,0 +1,11 @@
+<#if licenseFirst??>
+${licenseFirst}
+</#if>
+${licensePrefix}Copyright (C) Bitnobi Inc. - All Rights Reserved.
+* Unauthorized copying of this file, via any medium is strictly prohibited
+ * Proprietary and confidential
+* Written by   , March 2018.
+${licensePrefix}Each line should be prefixed with ${licensePrefix}
+<#if licenseLast??>
+${licenseLast}
+</#if>
