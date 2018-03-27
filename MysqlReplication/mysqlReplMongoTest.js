@@ -42,11 +42,15 @@ mysqlReplication.init(
                   break;
                   
                 case 'UpdateRows':
-                  
+                  var data = h.filteredUpdateRows(event);
+                  h.persistUpdateRows (db, data);                 
                   break;
+                  
                 case 'DeleteRows':
-                  
+                  var data = h.filteredDeleteRows(event);
+                  h.persistDeleteRows (db, data);                 
                   break;
+                  
                 default:
                     console.log('unexpected event.');
             }
@@ -57,6 +61,7 @@ mysqlReplication.init(
 process.on('SIGINT', function () {
     console.log('Got SIGINT.');
     mysqlReplication.stop();
+    db.close();
     process.exit();
 });
 

@@ -20,6 +20,31 @@
 var schemaReplicationSpecs = [
     {
         schemaName: 'db_mediportal',
+        tableName: 'clients_booking',
+        mongoCollectionName: 'MC-clients-booking',
+        primaryKey: 'booking_id',
+        columns: [
+            'booking_id',
+            'case_status',
+            'disability_classification',
+            'request_individual_province',
+            'business_line',
+            'secondary_business_line',
+            'consult_wait_time',
+            'treatment_wait_time',
+            'ps_fa_wait_time',
+            'treatment_wait_time',
+            'ps_fa_wait_time',
+            'ps_t_wait_time',
+            'booking_app_date',
+            'date_treatment_initiated',
+            'returns_to_work',
+            'reason_to_rtw',
+            'monthly_claim_benefit',
+            'service_cost', 
+        ]
+    }, {
+        schemaName: 'db_mediportal',
         tableName: 'rtw_reasons',
         mongoCollectionName: 'MC-rtw-reasons',
         primaryKey: 'id',
@@ -28,9 +53,20 @@ var schemaReplicationSpecs = [
             'description',
             'roi_including'     
         ]
-    },
-    
-    {
+    }, {
+        schemaName: 'db_mediportal',
+        tableName: 'step_duration',
+        mongoCollectionName: 'MC-step-duration',
+        primaryKey: 'id',
+        columns: [
+            'id',
+            'booking_id',
+            'step',
+            'time_start',
+            'time_end',
+            'status'     
+        ]
+    }, {
         schemaName: 'db_mediportal',
         tableName: 'time_lost_waiting',
         mongoCollectionName: 'MC-time-lost-waiting',
@@ -41,6 +77,7 @@ var schemaReplicationSpecs = [
             'time_lost'     
         ]
     }
+    
 ];
 
 /*

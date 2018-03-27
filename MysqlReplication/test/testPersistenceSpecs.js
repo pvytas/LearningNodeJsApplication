@@ -64,10 +64,19 @@ describe('test PersistenceSpecs', function () {
        
         testSpec = new PersistenceSpecs ('unknown_schema', 'test_table2');
         assert(!testSpec.getMongoCollectionName(), 'Should return false for \'unknown_schema.test_table2\'');
-        
-
     });
 
+
+    it('test getPrimaryKey()', function () {
+        var testSpec = new PersistenceSpecs ('test_schema', 'test_table1');
+        assert.equal(testSpec.getPrimaryKey(), 'id', 'Expecting \'id\'');
+        
+        testSpec = new PersistenceSpecs ('test_schema', 'unknown_table');
+        assert(!testSpec.getPrimaryKey(), 'Should return false for \'test_schema.unknown_table\'');
+       
+        testSpec = new PersistenceSpecs ('unknown_schema', 'test_table2');
+        assert(!testSpec.getPrimaryKey(), 'Should return false for \'unknown_schema.test_table2\'');
+    });
 
 
 

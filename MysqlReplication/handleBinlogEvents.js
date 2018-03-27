@@ -134,7 +134,7 @@ HandleBinlogEvents.prototype.persistUpdateRows = function (db, data) {
     if (!collectionName) return;
     
     var collection = db.collection(collectionName);
-    var primaryKey = this.persistenceSpecs.primaryKey();
+    var primaryKey = this.persistenceSpecs.getPrimaryKey();
     
 // if there are multiple rows in the update event, they must be for the
 // same schema and table.
@@ -204,7 +204,7 @@ HandleBinlogEvents.prototype.persistDeleteRows = function (db, data) {
     if (!collectionName) return;
     
     var collection = db.collection(collectionName);
-    var primaryKey = this.persistenceSpecs.primaryKey();
+    var primaryKey = this.persistenceSpecs.getPrimaryKey();
     
 // if there are multiple rows in the update event, they must be for the
 // same schema and table.
@@ -213,7 +213,7 @@ HandleBinlogEvents.prototype.persistDeleteRows = function (db, data) {
         var query = {};
         query['data.'.concat(primaryKey)] = row.data[primaryKey];
         query.endDate = new Date(9999, 5, 24, 11, 33, 30, 0);
-        collection.update (query, {$set: {endDate: row.startDate}}, 
+        collection.update (query, {$set: {endDate: new Date()}}, 
             function(err, result) {
                 if (err) {
                     console.log(err.message);
