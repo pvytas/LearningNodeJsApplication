@@ -8,8 +8,8 @@
   var ZongJi = require('zongji');
 
   var zongji = new ZongJi({
-//	host     : '130.63.218.35',
-        host: '10.0.1.11',
+	host     : '130.63.216.129',
+//        host: '10.0.1.11',
         port: '3307',
 	user     : 'zongji',
 	password : 'zongji',

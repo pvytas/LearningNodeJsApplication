@@ -237,7 +237,7 @@ var expectedOutput4 = [
 ];
 
 
-describe('test HandleBinlogEvents', function () {
+describe('test HandleBinlogEvents filtering functions', function () {
 
     it('test filteredWriteRows()', function () {
         var h  = new HandleBinlogEvents();
@@ -299,3 +299,49 @@ describe('test HandleBinlogEvents', function () {
     });
 });
 
+var MongoClient = require('mongodb').MongoClient;
+var db;
+// Connect to the db
+
+
+describe('test HandleBinlogEvents persistence functions', function () {
+// before running these tests, open a mongodb connection.
+    before(function (done) {
+        MongoClient.connect("mongodb://localhost:27017/binlog-test", function(err, new_db) {
+            if(err) { return console.dir(err); }
+
+            db = new_db;
+            done();
+        });
+    });
+    
+    it('test persistWriteRows()', function (done) {
+        var h  = new HandleBinlogEvents();
+        h.tableMap (tableMapEvent1);
+        var filteredData = h.filteredWriteRows(writeRowsEvent1);
+        h.persistWriteRows (db, filteredData, function (err) {
+            var collection = db.collection('MC-test-table1');
+            collection.find().toArray(function(err, output) {
+                // startDate will always be changing, so let's over-write it with
+                // a constant value for comparison purposes. Also delete the _id field.
+                output.forEach(function(row) {
+                    row.startDate = new Date(2018, 3, 23);
+                    delete row._id;
+                });
+                assert (_.isEqual (expectedOutput1, output), 
+                    'output should match expected output.');
+
+                //cleanup what we have inserted.
+                collection.drop();
+                done();
+            });
+        });
+    });
+    
+    
+    //After all tests are finished close the database connection.
+    after(function(done){
+        db.close();
+        done();
+    });
+});

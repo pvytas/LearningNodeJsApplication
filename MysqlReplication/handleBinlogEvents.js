@@ -65,13 +65,15 @@ HandleBinlogEvents.prototype.filteredWriteRows = function (event) {
 };
 
 
-HandleBinlogEvents.prototype.persistWriteRows = function (db, data) {
+HandleBinlogEvents.prototype.persistWriteRows = function (db, data, cb) {
     if ((!data) || data.length === 0) return;   
     var collectionName = this.persistenceSpecs.getMongoCollectionName();
     if (!collectionName) return;
     
     var collection = db.collection(collectionName);
-    collection.insert(data, {w:1}, function(err, result) {});
+    collection.insert(data, {w:1}, function(err, result) {
+        if (!(cb === undefined)) cb(err);
+    });
 };
 
 
