@@ -28,19 +28,50 @@ MongoClient.connect("mongodb://localhost:27017/exampleDb", function(err, db) {
    
    var expectedOutput1 = [ 
   { data: {id: '1', column1: 'c2', column2: 'c3' },
-    startDate: new Date(2018, 3, 23),
+    startDate: new Date(),
     endDate: new Date(9999, 5, 24, 11, 33, 30, 0) },
 
   { data: { id: '2', column1: 'c6', column2: 'c7' },
-    startDate: new Date(2018, 3, 23),
+    startDate: new Date(),
     endDate: new Date(9999, 5, 24, 11, 33, 30, 0)  },
 
   { data: { id: '3', column1: 'c10', column2: 'c11' },
-    startDate: new Date(2018, 3, 23),
+    startDate: new Date(),
     endDate: new Date(9999, 5, 24, 11, 33, 30, 0)  } 
-];
+    ];
 
-collection.insert(expectedOutput1, {w:1}, function(err, result) {});
+    collection.insert(expectedOutput1, {w:1}, function(err, result) {
+        var primaryKey = 'id';
+
+        var row = { data: {id: '2', column1: 'update', column2: 'c7' },
+        startDate: new Date(),
+        endDate: new Date(9999, 5, 24, 11, 33, 30, 0) };
+        console.log ('row=', row);
+
+        var query = {};
+        query['data.'.concat(primaryKey)] = row.data[primaryKey];
+        query.endDate = new Date(9999, 5, 24, 11, 33, 30, 0);
+        console.log ('query=', query);
+
+        collection.update (query, {$set: {endDate: row.startDate}}, 
+            function(err, result) {
+                if (err) {
+                    console.log(err.message);
+                }
+            });
+
+        collection.insert(row, {w:1}, function(err, result) {
+                if (err) {
+                    console.log(err.message);
+                }
+                
+                db.close();
+        });
+
+    });
+
 });
+
+console.log('done.');
 
 

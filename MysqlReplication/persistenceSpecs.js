@@ -101,6 +101,13 @@ PersistenceSpecs.prototype.getMongoCollectionName = function () {
     return false;
 };
 
+PersistenceSpecs.prototype.getPrimaryKey = function () {
+    if (this.currentTableSpec) 
+        return this.currentTableSpec.primaryKey;
+ 
+    return false;
+};
+
 module.exports = PersistenceSpecs;
 module.exports.loadSpecs = loadSpecs;
 
