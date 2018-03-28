@@ -4,8 +4,8 @@
  * and open the template in the editor.
  */
 
-var mysqlReplication = require('./mysqlReplication');
-var HandleBinlogEvents = require ('./handleBinlogEvents');
+var mysqlReplication = require('../mysqlReplication');
+var HandleBinlogEvents = require ('../handleBinlogEvents');
 var MongoClient = require('mongodb').MongoClient;
 
 var h  = new HandleBinlogEvents();

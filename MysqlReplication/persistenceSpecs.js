@@ -149,5 +149,4 @@ PersistenceSpecs.prototype.getPrimaryKey = function () {
 
 module.exports = PersistenceSpecs;
 module.exports.loadSpecs = loadSpecs;
-
-
+module.exports.getSurrogateHighDate = getSurrogateHighDate;

@@ -10,7 +10,7 @@ var PersistenceSpecs = require ("./persistenceSpecs");
 var mysql = require('mysql');
 var stream = require('stream');
 
-function LoadFromMysql (mysqlDsn, ) {
+function LoadFromMysql (mysqlDsn) {
     this.mysqlDsn = mysqlDsn;
 }
 
@@ -47,28 +47,49 @@ function mysqlSelectFromSpec (spec) {
     return output;
 }
 
-function loadMysqlFromSpec (connection, spec, db) {
-    
-    h 
-    
-    connection.query(mysqlSelectFromSpec (spec))
-        .stream()
-        .pipe(stream.Transform({
-          objectMode: true,
-          transform: function(data,encoding,callback) {
-            console.log(data);
-            var data = h.filteredWriteRows(data.RowDataPacket);
-            h.persistWriteRows (db, );
-            callback();
-          }
-         })
-         .on('finish',function() { 
-             console.log('done');
-        }));
 
-};
+/*
+ * formatMysqlRow - takes one row of result set from mysql and formats
+ * it for persistance to MongoDB.
+ */
+function formatMysqlRow (row) {
+    var output = { data: {} };
+
+    Object.keys(row).forEach(function(name) {
+         output.data[name] = row[name];
+    });
+
+    output.startDate = new Date();
+    output.endDate = PersistenceSpecs.getSurrogateHighDate();
+
+    return (output);    
+}
+
+
+function loadMysqlFromSpec(connection, spec, db, cb) {
+    connection.query(mysqlSelectFromSpec(spec))
+            .stream()
+            .pipe(stream.Transform({
+                objectMode: true,
+                transform: function (row, encoding, callback) {
+                    var data = formatMysqlRow(row);
+                    var collection = db.collection(spec.mongoCollectionName);
+                    collection.insert(data, {w: 1}, function (err, result) {
+                        callback();
+                    });
+//                  console.log(data);
+                }
+            })
+                    .on('finish', function () {
+                        if (!(cb === undefined))
+                            cb();
+                    }));
+}
+
 
 
 
 module.exports = LoadFromMysql;
 module.exports.mysqlSelectFromSpec = mysqlSelectFromSpec;
+module.exports.formatMysqlRow = formatMysqlRow;
+module.exports.loadMysqlFromSpec = loadMysqlFromSpec;

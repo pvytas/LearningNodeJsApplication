@@ -6,14 +6,9 @@
 
 var mysql = require('mysql');
 var stream = require('stream');
+var testConfig = require('./testConfig');
 
-var connection = mysql.createConnection({
-  host: '10.0.1.11',
-  port: '3307',
-  user: 'bitnobi',
-  password: 'bitnobi',
-  database: 'db_mediportal'
-});
+var connection = mysql.createConnection(testConfig.dsn);
 
 
 connection.connect(function (err) {
@@ -32,12 +27,13 @@ if(err){
 //  console.log(rows);
 //});
 
-connection.query('SELECT * FROM rtw_reasons')
+connection.query('SELECT * FROM `db_mediportal`.`rtw_reasons`;')
         .stream()
         .pipe(stream.Transform({
           objectMode: true,
           transform: function(data,encoding,callback) {
-            console.log(data);
+//            console.log(data);
+            console.log (JSON.stringify(data));
             callback();
           }
          })

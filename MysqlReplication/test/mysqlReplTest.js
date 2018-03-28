@@ -4,16 +4,14 @@
  * and open the template in the editor.
  */
 
-var mysqlReplication = require('./mysqlReplication');
+var mysqlReplication = require('../mysqlReplication');
+var testConfig = require('./testConfig');
 
 mysqlReplication.init(
+        
 // Pass the connection settings
-        {
-            host: '130.63.218.35',
-            port: '3307',
-            user: 'zongji',
-            password: 'zongji'
-        },
+        testConfig.dsn,
+        
 // Pass the options
 // Must include rotate events for binlogName and binlogNextPos properties
         {
