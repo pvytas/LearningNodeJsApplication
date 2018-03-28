@@ -33,8 +33,6 @@ var schemaReplicationSpecs = [
             'consult_wait_time',
             'treatment_wait_time',
             'ps_fa_wait_time',
-            'treatment_wait_time',
-            'ps_fa_wait_time',
             'ps_t_wait_time',
             'booking_app_date',
             'date_treatment_initiated',
@@ -88,6 +86,10 @@ var schemaReplicationSpecs = [
 function loadSpecs (newSpecs) {
     schemaReplicationSpecs = newSpecs;
 };
+
+function getCurrentDateTime() { return new Date(); };
+
+function getSurrogateHighDate() {return new Date(9999, 5, 24, 11, 33, 30, 0);};
 
 /*
  * Constructor for PersistenceSpecs object

@@ -14,7 +14,8 @@ var db = {};
 mysqlReplication.init(
 // Pass the connection settings
         {
-            host: '10.0.1.11',
+            host: '130.63.216.129',
+//            host: '10.0.1.11',
             port: '3307',
             user: 'zongji',
             password: 'zongji'

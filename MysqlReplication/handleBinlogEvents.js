@@ -57,7 +57,7 @@ HandleBinlogEvents.prototype.filteredWriteRows = function (event) {
         });
         
         rowOutput.startDate = new Date();
-        rowOutput.endDate = new Date(9999, 5, 24, 11, 33, 30, 0);
+        rowOutput.endDate = PersistenceSpecs.getSurrogateHighDate();
         
         output.push (rowOutput);               
     });    
@@ -97,7 +97,8 @@ HandleBinlogEvents.prototype.persistWriteRows = function (db, data, cb) {
  *  that can be persisted to a MongoDB collection.
  *  
  *  optimization: emit empty row if there are no changes in the columns
- *  of interest.
+ *  of interest. Note that if value is a date object, comparison
+ *  must use date.getTime() function.
  */
  
 HandleBinlogEvents.prototype.filteredUpdateRows = function (event) {
@@ -112,17 +113,29 @@ HandleBinlogEvents.prototype.filteredUpdateRows = function (event) {
 //  of interest.
         var changeFound = false;
         Object.keys(row.before).forEach(function(name) {
-          if (specs.requireColumn (name)) {
-              rowOutput.data[name] = row.after[name];
-              if (!(row.before[name] === row.after[name])) {
-                  changeFound = true;
-              }
-          }
+            if (specs.requireColumn (name)) {
+                rowOutput.data[name] = row.after[name];
+                
+                var before = row.before[name];
+                var after = row.after[name];
+
+                if ((before !== null) && (before.constructor === Date)) {
+                    if (before.getTime() !== after.getTime()) {
+//                        console.log ('dates diff %s value %s -> %s', name, before, after);
+                        changeFound = true;
+                    }
+                } else {
+                    if (before !== after) {
+//                        console.log ('diff %s value %s -> %s', name, before, after);
+                        changeFound = true;
+                    }
+                }
+            }
         });
         
         if (changeFound) {
             rowOutput.startDate = new Date();
-            rowOutput.endDate = new Date(9999, 5, 24, 11, 33, 30, 0);
+            rowOutput.endDate = PersistenceSpecs.getSurrogateHighDate();
             output.push (rowOutput);
         }
     });    
@@ -144,7 +157,7 @@ HandleBinlogEvents.prototype.persistUpdateRows = function (db, data) {
         
         var query = {};
         query['data.'.concat(primaryKey)] = row.data[primaryKey];
-        query.endDate = new Date(9999, 5, 24, 11, 33, 30, 0);
+        query.endDate = PersistenceSpecs.getSurrogateHighDate();
         collection.update (query, {$set: {endDate: row.startDate}}, 
             function(err, result) {
                 if (err) {
@@ -214,7 +227,7 @@ HandleBinlogEvents.prototype.persistDeleteRows = function (db, data) {
         
         var query = {};
         query['data.'.concat(primaryKey)] = row.data[primaryKey];
-        query.endDate = new Date(9999, 5, 24, 11, 33, 30, 0);
+        query.endDate = PersistenceSpecs.getSurrogateHighDate();
         collection.update (query, {$set: {endDate: new Date()}}, 
             function(err, result) {
                 if (err) {

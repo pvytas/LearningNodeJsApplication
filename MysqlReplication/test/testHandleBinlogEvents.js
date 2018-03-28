@@ -70,15 +70,15 @@ var writeRowsEvent1 = {
 var expectedOutput1 = [ 
   { data: {id: '1', column1: 'c2', column2: 'c3' },
     startDate: new Date(2018, 3, 23),
-    endDate: new Date(9999, 5, 24, 11, 33, 30, 0) },
+    endDate: PersistenceSpecs.getSurrogateHighDate() },
 
   { data: { id: '2', column1: 'c6', column2: 'c7' },
     startDate: new Date(2018, 3, 23),
-    endDate: new Date(9999, 5, 24, 11, 33, 30, 0)  },
+    endDate: PersistenceSpecs.getSurrogateHighDate()  },
 
   { data: { id: '3', column1: 'c10', column2: 'c11' },
     startDate: new Date(2018, 3, 23),
-    endDate: new Date(9999, 5, 24, 11, 33, 30, 0)  } 
+    endDate:PersistenceSpecs.getSurrogateHighDate()  } 
 ];
 
 var tableMapEventDontCareTable = {
@@ -155,16 +155,16 @@ var updateRowsEvent2 = {
 var expectedOutput2 = [ 
   { data: {id: '1', column1: 'updated', column2: 'c3' },
     startDate: new Date(2018, 3, 23),
-    endDate: new Date(9999, 5, 24, 11, 33, 30, 0) },
+    endDate: PersistenceSpecs.getSurrogateHighDate() },
 
 //  should not generate row if no columns of interest have changed.
 //  { data: { id: '2', column1: 'c6', column2: 'c7' },
 //    startDate: new Date(2018, 3, 23),
-//    endDate: new Date(9999, 5, 24, 11, 33, 30, 0)  },
+//    endDate: PersistenceSpecs.getSurrogateHighDate()  },
 
   { data: { id: '3', column1: 'c10', column2: 'updated' },
     startDate: new Date(2018, 3, 23),
-    endDate: new Date(9999, 5, 24, 11, 33, 30, 0)  } 
+    endDate: PersistenceSpecs.getSurrogateHighDate()  } 
 ];
 
 

@@ -5,7 +5,7 @@
  */
 
 var mysql = require('mysql');
-
+var stream = require('stream');
 
 var connection = mysql.createConnection({
   host: '10.0.1.11',
@@ -25,12 +25,25 @@ if(err){
   console.log('Connection established');
 });
 
-connection.query('SELECT * FROM rtw_reasons', function (err,rows) {
-  if(err) throw err;
+//connection.query('SELECT * FROM rtw_reasons', function (err,rows) {
+//  if(err) throw err;
+//
+//  console.log('Data received from Db:\n');
+//  console.log(rows);
+//});
 
-  console.log('Data received from Db:\n');
-  console.log(rows);
-});
+connection.query('SELECT * FROM rtw_reasons')
+        .stream()
+        .pipe(stream.Transform({
+          objectMode: true,
+          transform: function(data,encoding,callback) {
+            console.log(data);
+            callback();
+          }
+         })
+         .on('finish',function() { 
+             console.log('done');
+        }));
 
 
 connection.end (function (err) {
