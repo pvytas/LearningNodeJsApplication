@@ -5,6 +5,15 @@
  * Written, March 2018.
  */
 
+/*
+ * handleBinlogEvents - handles a MySQL replication event emitted from 
+ * the zongji module. Expected event types are:
+ * 
+ * TableMap    - sets the schema and table name of the event to follow
+ * WriteEvent  - insert one or more rows into a table
+ * UpdateEvent - update one or more rows in a table
+ * DeleteEvent - delete one or more rows from a table
+ */
 
 
 PersistenceSpecs = require ("./persistenceSpecs");
@@ -24,59 +33,170 @@ HandleBinlogEvents.prototype.getMongoCollectionName = function () {
 };
 
 /*
- * filteredWriteRows - iterates through rows and columns of binlog WriteEvent.
+ * filterWriteRows - iterates through rows and columns of binlog WriteEvent.
  * For each column listed in the spec, creates an array of objects like:
  * 
  * {
- *    data: [
  *      column1: value,
  *      column4: value,
  *      .
  *      .
  *      .
- *      columnn: value ],
- *    startDate: current_date,
- *    endDate: max_date
+ *      columnn: value
  * }
  * 
- *  that can be persisted to a MongoDB collection.
  */
  
-HandleBinlogEvents.prototype.filteredWriteRows = function (event) {
+HandleBinlogEvents.prototype.filterWriteRows = function (event) {
     var specs = this.persistenceSpecs;
     if (!specs.requireCurrentTable()) return [];
     
     var output = [];
     event.rows.forEach(function(row) {
-        var rowOutput = { data: {} };
+        var rowOutput = {};
 
         Object.keys(row).forEach(function(name) {
           if (specs.requireColumn (name)) {
-              rowOutput.data[name] = row[name];
+              rowOutput[name] = row[name];
           }
         });
-        
-        rowOutput.startDate = new Date();
-        rowOutput.endDate = PersistenceSpecs.getSurrogateHighDate();
-        
+
         output.push (rowOutput);               
     });    
     return (output);
 };
 
 
-HandleBinlogEvents.prototype.persistWriteRows = function (db, data, cb) {
+/*
+ * formatDWAttr - adds elements for persisting to DataWarehouse collection.
+ * Accepts an array of rows with each row like:
+ * 
+ * {
+ *      column1: value,
+ *      column4: value,
+ *      .
+ *      .
+ *      .
+ *      columnn: value 
+ * }
+ * 
+ * and returns a formatted array of rows where each row is like:
+ * 
+ * {
+ *    data: {
+ *      column1: value,
+ *      column4: value,
+ *      .
+ *      .
+ *      .
+ *      columnn: value },
+ *    startDate: current_date,
+ *    endDate: max_date
+ * }
+ * 
+ */
+
+function formatDWAttr(row) {
+     var output = {
+        'data': row,
+        'startDate': new Date(),
+        'endDate': PersistenceSpecs.getSurrogateHighDate()
+    };   
+
+    return (output);
+};
+
+
+function formatDWAttrArray (rows) {
+    var output = [];
+    if ((!rows) || rows.length === 0) return (output);  
+
+    rows.forEach(function(row) {
+        var rowOutput = formatDWAttr(row);
+        output.push (rowOutput);               
+    });    
+    return (output);
+};
+
+
+
+/*
+ * formatResultAttr - adds elements for persisting to result-MC collection.
+ * Accepts an array of rows with each row like:
+ * 
+ * {
+ *      column1: value,
+ *      column4: value,
+ *      .
+ *      .
+ *      .
+ *      columnn: value 
+ * }
+ * 
+ * and returns a formatted array of rows where each row is like:
+ * 
+ * {
+ *    ownerId: 'MC',
+ *    dateAdded: current_date,
+ *    data: {
+ *      column1: value,
+ *      column4: value,
+ *      .
+ *      .
+ *      .
+ *      columnn: value },
+ *    sourceExportable: true,
+ *    exportable: true
+ * }
+ * 
+ */
+ 
+function formatResultAttr(row) {
+    var output = {
+        'ownerId': 'MC',
+        'dateAdded': new Date(),
+        'data': row,
+        'sourceExportable': true,
+        'exportable': true
+    };
+
+    return (output);
+};
+
+
+function formatResultAttrArray (rows) {
+    var output = [];
+    if ((!rows) || rows.length === 0) return (output);  
+
+    rows.forEach(function(row) {
+        var rowOutput = formatResultAttr(row);
+        output.push (rowOutput);               
+    });    
+    return (output);
+};
+
+
+HandleBinlogEvents.prototype.persistWriteRows = function (db, data, rsData, cb) {
     if ((!data) || data.length === 0) return;   
     var collectionName = this.persistenceSpecs.getMongoCollectionName();
     if (!collectionName) return;
     
     var collection = db.collection(collectionName);
-    collection.insert(data, {w:1}, function(err, result) {
+    collection.insert(data, {w:1}, function(err, result) {  });
+    
+    var rsCollection = db.collection('result-' + collectionName);
+    rsCollection.insert(rsData, {w:1}, function(err, result) {
         if (!(cb === undefined)) cb(err);
     });
 };
 
+HandleBinlogEvents.prototype.handleWriteRows = function (db, event) {
+    var filteredData = this.filterWriteRows(event);
+    var dwData = formatDWAttrArray(filteredData);
+    var rsData = formatResultAttrArray(filteredData);
 
+    this.persistWriteRows(db, dwData, rsData, function (err) { });
+};
 
 /*
  * filteredUpdateRows - iterates through rows and columns of binlog UpdateRows event.
@@ -239,3 +359,7 @@ HandleBinlogEvents.prototype.persistDeleteRows = function (db, data) {
 
 
 module.exports = HandleBinlogEvents;
+module.exports.formatDWAttr = formatDWAttr;
+module.exports.formatDWAttrArray = formatDWAttrArray;
+module.exports.formatResultAttr = formatResultAttr;
+module.exports.formatResultAttrArray = formatResultAttrArray;

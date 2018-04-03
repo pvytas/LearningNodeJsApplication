@@ -9,8 +9,8 @@
 
 module.exports = {
     dsn: {
-        host: '130.63.218.150',
-//      host: '10.0.1.11',
+//        host: '130.63.218.150',
+        host: '10.0.1.11',
         port: '3307',
         user: 'zongji',
         password: 'zongji'

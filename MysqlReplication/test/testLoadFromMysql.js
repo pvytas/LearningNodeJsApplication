@@ -55,41 +55,4 @@ describe('test loadFromMysql', function () {
 
 
 
-    /*
-     * simulates one row of result set returned from MySQL.
-     */
-    var mysqlRow = {
-        id: '1',
-        column1: 'c2',
-        column2: 'c3'
-    };
-
-    var expectedOutput1 = {
-        data: {id: '1', column1: 'c2', column2: 'c3'},
-        startDate: new Date(2018, 3, 23),
-        endDate: PersistenceSpecs.getSurrogateHighDate()
-    };
-    it('test formatMysqlRow()', function () {
-        var output = LoadFromMysql.formatMysqlRow(mysqlRow);
-        
-// startDate will always be changing, so let's over-write it with
-// a constant value for test purposes.
-        output.startDate = new Date(2018, 3, 23);
-        
-        assert (_.isEqual (expectedOutput1, output), 'Expecting: ' + expectedOutput1);
-    });
-
-
-
 });
-
-
-var mysqlDsn = {
-  host: '10.0.1.11',
-  port: '3307',
-  user: 'bitnobi',
-  password: 'bitnobi',
-  database: 'db_mediportal'
-};
-
-

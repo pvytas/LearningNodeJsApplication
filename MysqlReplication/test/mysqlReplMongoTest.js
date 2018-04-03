@@ -38,8 +38,7 @@ mysqlReplication.init(
                   break;
                   
                 case 'WriteRows':
-                  var data = h.filteredWriteRows(event);
-                  h.persistWriteRows (db, data);
+                  h.handleWriteRows (db, event);
                   break;
                   
                 case 'UpdateRows':

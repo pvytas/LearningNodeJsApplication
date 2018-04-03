@@ -14,32 +14,10 @@ var mysql = require('mysql');
 var testConfig = require('./testConfig');
 var MongoClient = require('mongodb').MongoClient;
 var LoadFromMysql = require('../loadFromMysql');
+var PersistenceSpecs = require ("../persistenceSpecs");
+
 var db = {};
 
-var spec = {
-    schemaName: 'db_mediportal',
-    tableName: 'clients_booking',
-    mongoCollectionName: 'MC-clients-booking',
-    primaryKey: 'booking_id',
-    columns: [
-        'booking_id',
-        'case_status',
-        'disability_classification',
-        'request_individual_province',
-        'business_line',
-        'secondary_business_line',
-        'consult_wait_time',
-        'treatment_wait_time',
-        'ps_fa_wait_time',
-        'ps_t_wait_time',
-        'booking_app_date',
-        'date_treatment_initiated',
-        'returns_to_work',
-        'reason_to_rtw',
-        'monthly_claim_benefit',
-        'service_cost',
-    ]
-};
 
 var connection;
 
@@ -70,7 +48,8 @@ MongoClient.connect("mongodb://localhost:27017/exampleDb", function (err, new_db
         console.log('Connection established');
     });
 
-    LoadFromMysql.loadMysqlFromSpec(connection, spec, db, 1, function () {
+    LoadFromMysql.loadMysqlFromSpecArray(connection, 
+    PersistenceSpecs.schemaReplicationSpecs, db, function () {
         console.log('done');
 
         connection.end(function (err) {
