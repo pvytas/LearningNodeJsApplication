@@ -100,7 +100,7 @@ function loadMysqlFromSpec(connection, spec, db, i, done) {
 
 /*
  * loadFromMysqlArray  - selects data from a MySQL database and persists it to
- * a MongoDB collections. The name of the schemas, tables and columns to be
+ * MongoDB collections. The name of the schemas, tables and columns to be
  * extracted as well as the target MongoDB collection names are specified
  * in an array of specification objects (see module persistenceSpecs).
  * 

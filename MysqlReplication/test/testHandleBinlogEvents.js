@@ -30,7 +30,85 @@ var testSpecs = [
         ]
     }];
 
-PersistenceSpecs.loadSpecs (testSpecs);
+PersistenceSpecs.loadSpecs(testSpecs);
+
+var tableMapEvent1 = {
+    schemaName: 'test_schema',
+    tableName: 'test_table1'
+};
+
+/*
+ * simulates the structures of interest in the zongji WriteRows event.
+ */
+var writeRowsEvent1 = {
+    rows: [
+        {
+            id: '1',
+            column1: 'c2',
+            column2: 'c3',
+            column3: 'c4',
+            column4: 'c5'
+        }, {
+            id: '2',
+            column1: 'c6',
+            column2: 'c7',
+            column3: 'c8',
+            column4: 'c9'
+        }, {
+            id: '3',
+            column1: 'c10',
+            column2: 'c11',
+            column3: 'c12',
+            column4: 'c13'
+        }
+    ]
+};
+
+var expectedFilteredOutput1 = [
+    {id: '1', column1: 'c2', column2: 'c3'},
+    {id: '2', column1: 'c6', column2: 'c7'},
+    {id: '3', column1: 'c10', column2: 'c11'}
+];
+
+
+
+var expectedOutput1 = [
+    {data: {id: '1', column1: 'c2', column2: 'c3'},
+        startDate: new Date(2018, 3, 23),
+        endDate: PersistenceSpecs.getSurrogateHighDate()},
+
+    {data: {id: '2', column1: 'c6', column2: 'c7'},
+        startDate: new Date(2018, 3, 23),
+        endDate: PersistenceSpecs.getSurrogateHighDate()},
+
+    {data: {id: '3', column1: 'c10', column2: 'c11'},
+        startDate: new Date(2018, 3, 23),
+        endDate: PersistenceSpecs.getSurrogateHighDate()}
+];
+
+
+
+var expectedResultFormat1 = [
+    {'ownerId': 'MC',
+        'dateAdded': new Date(2018, 3, 23),
+        'data': {id: '1', column1: 'c2', column2: 'c3'},
+        'sourceExportable': true,
+        'exportable': true},
+
+    {'ownerId': 'MC',
+        'dateAdded': new Date(2018, 3, 23),
+        'data': {id: '2', column1: 'c6', column2: 'c7'},
+        'sourceExportable': true,
+        'exportable': true},
+
+    {'ownerId': 'MC',
+        'dateAdded': new Date(2018, 3, 23),
+        'data': {id: '3', column1: 'c10', column2: 'c11'},
+        'sourceExportable': true,
+        'exportable': true}
+];
+
+
 
 var tableMapEvent2 = {
     schemaName: 'test_schema',
@@ -43,76 +121,67 @@ var tableMapEvent2 = {
  */
 var updateRowsEvent2 = {
     rows: [
-        { 
+        {
             before:
-            {
-                id: '1',
-                column1: 'c2',
-                column2: 'c3', 
-                column3: 'c4',
-                column4: 'c5'
-            },
-            after:    
-            {
-               id: '1',
-               column1: 'updated',
-               column2: 'c3', 
-               column3: 'c4',
-               column4: 'c5'
-           }
-       }, {
-            before:
-            {
-                id: '2',
-                column1: 'c6',
-                column2: 'c7', 
-                column3: 'c8',
-                column4: 'c9'
-            },
+                    {
+                        id: '1',
+                        column1: 'c2',
+                        column2: 'c3',
+                        column3: 'c4',
+                        column4: 'c5'
+                    },
             after:
-            {
-                id: '2',
-                column1: 'c6',
-                column2: 'c7', 
-                column3: 'updated',
-                column4: 'c9'
-            }
+                    {
+                        id: '1',
+                        column1: 'updated',
+                        column2: 'c3',
+                        column3: 'c4',
+                        column4: 'c5'
+                    }
         }, {
             before:
-            {
-                id: '3',
-                column1: 'c10',
-                column2: 'c11', 
-                column3: 'c12',
-                column4: 'c13'
-            },
+                    {
+                        id: '2',
+                        column1: 'c6',
+                        column2: 'c7',
+                        column3: 'c8',
+                        column4: 'c9'
+                    },
             after:
-            {
-                id: '3',
-                column1: 'c10',
-                column2: 'updated', 
-                column3: 'c12',
-                column4: 'c13'
-            }
+                    {
+                        id: '2',
+                        column1: 'c6',
+                        column2: 'c7',
+                        column3: 'updated',
+                        column4: 'c9'
+                    }
+        }, {
+            before:
+                    {
+                        id: '3',
+                        column1: 'c10',
+                        column2: 'c11',
+                        column3: 'c12',
+                        column4: 'c13'
+                    },
+            after:
+                    {
+                        id: '3',
+                        column1: 'c10',
+                        column2: 'updated',
+                        column3: 'c12',
+                        column4: 'c13'
+                    }
         }
     ]
 };
 
-var expectedOutput2 = [ 
-  { data: {id: '1', column1: 'updated', column2: 'c3' },
-    startDate: new Date(2018, 3, 23),
-    endDate: PersistenceSpecs.getSurrogateHighDate() },
-
+var expectedFilteredOutput2 = [
+    {id: '1', column1: 'updated', column2: 'c3'},
 //  should not generate row if no columns of interest have changed.
-//  { data: { id: '2', column1: 'c6', column2: 'c7' },
-//    startDate: new Date(2018, 3, 23),
-//    endDate: PersistenceSpecs.getSurrogateHighDate()  },
-
-  { data: { id: '3', column1: 'c10', column2: 'updated' },
-    startDate: new Date(2018, 3, 23),
-    endDate: PersistenceSpecs.getSurrogateHighDate()  } 
+//  { id: '2', column1: 'c6', column2: 'c7' }},
+    {id: '3', column1: 'c10', column2: 'updated'}
 ];
-
 
 
 var tableMapEvent3 = {
@@ -125,28 +194,29 @@ var tableMapEvent3 = {
  */
 var updateRowsEvent3 = {
     rows: [
-        { 
+        {
             before:
-            {
-                id: '2',
-                column1: 'c6',
-                column2: 'c7', 
-                column3: 'c8',
-                column4: 'c9'
-            },
+                    {
+                        id: '2',
+                        column1: 'c6',
+                        column2: 'c7',
+                        column3: 'c8',
+                        column4: 'c9'
+                    },
             after:
-            {
-                id: '2',
-                column1: 'c6',
-                column2: 'c7', 
-                column3: 'updated',
-                column4: 'c9'
-            }
+                    {
+                        id: '2',
+                        column1: 'c6',
+                        column2: 'c7',
+                        column3: 'updated',
+                        column4: 'c9'
+                    }
         }
     ]
 };
 
 var expectedOutput3 = [];
+
 
 
 var tableMapEvent4 = {
@@ -163,13 +233,13 @@ var deleteRowsEvent4 = {
         {
             id: '1',
             column1: 'c2',
-            column2: 'c3', 
+            column2: 'c3',
             column3: 'c4',
             column4: 'c5'
-        },{
+        }, {
             id: '2',
             column1: 'c6',
-            column2: 'c7', 
+            column2: 'c7',
             column3: 'c8',
             column4: 'c9'
         }
@@ -177,60 +247,23 @@ var deleteRowsEvent4 = {
 };
 
 
-var expectedOutput4 = [ 
-  { data: {id: '1', column1: 'c2', column2: 'c3' } },
-  { data: { id: '2', column1: 'c6', column2: 'c7' } }
+var expectedOutput4 = [
+    {data: {id: '1', column1: 'c2', column2: 'c3'}},
+    {data: {id: '2', column1: 'c6', column2: 'c7'}}
 ];
 
 
 
 
 describe('test HandleBinlogEvents filtering and formatting functions', function () {
-    var tableMapEvent1 = {
-        schemaName: 'test_schema',
-        tableName: 'test_table1'
-    };
-
-    /*
-     * simulates the structures of interest in the zongji WriteRows event.
-     */
-    var writeRowsEvent1 = {
-        rows: [
-            {
-                id: '1',
-                column1: 'c2',
-                column2: 'c3', 
-                column3: 'c4',
-                column4: 'c5'
-            },{
-                id: '2',
-                column1: 'c6',
-                column2: 'c7', 
-                column3: 'c8',
-                column4: 'c9'
-            }, {
-                id: '3',
-                column1: 'c10',
-                column2: 'c11', 
-                column3: 'c12',
-                column4: 'c13'
-            }
-        ]
-    };
-
-    var expectedFilteredOutput1 = [ 
-        { id: '1', column1: 'c2', column2: 'c3' },
-        { id: '2', column1: 'c6', column2: 'c7' },
-        { id: '3', column1: 'c10', column2: 'c11' }
-    ];
 
     it('test filterWriteRows()', function () {
-        var h  = new HandleBinlogEvents();
-        h.tableMap (tableMapEvent1);
+        var h = new HandleBinlogEvents();
+        h.tableMap(tableMapEvent1);
         var output = h.filterWriteRows(writeRowsEvent1);
 
-        assert (_.isEqual (expectedFilteredOutput1, output), 
-            'output should match expected output.');
+        assert(_.isEqual(expectedFilteredOutput1, output),
+                'output should match expected output.');
     });
 
 
@@ -240,118 +273,79 @@ describe('test HandleBinlogEvents filtering and formatting functions', function 
     };
 
     it('test filterWriteRows() for table that we don\'t care about', function () {
-        var h  = new HandleBinlogEvents();
-        h.tableMap (tableMapEventDontCareTable);
+        var h = new HandleBinlogEvents();
+        h.tableMap(tableMapEventDontCareTable);
         var output = h.filterWriteRows(writeRowsEvent1);
-        assert ((output.length === 0), 'output should be undefined.');
+        assert((output.length === 0), 'output should be undefined.');
     });
 
 
-
-    var expectedOutput1 = [ 
-      { data: {id: '1', column1: 'c2', column2: 'c3' },
-        startDate: new Date(2018, 3, 23),
-        endDate: PersistenceSpecs.getSurrogateHighDate() },
-
-      { data: { id: '2', column1: 'c6', column2: 'c7' },
-        startDate: new Date(2018, 3, 23),
-        endDate: PersistenceSpecs.getSurrogateHighDate()  },
-
-      { data: { id: '3', column1: 'c10', column2: 'c11' },
-        startDate: new Date(2018, 3, 23),
-        endDate:PersistenceSpecs.getSurrogateHighDate()  } 
-    ];
-
     it('test formatDWAttrArray()', function () {
-        var h  = new HandleBinlogEvents();
+        var h = new HandleBinlogEvents();
         var output = HandleBinlogEvents.formatDWAttrArray(expectedFilteredOutput1);
-        
+
 // startDate will always be changing, so let's over-write it with
 // a constant value for test purposes.
-        output.forEach(function(row) {
+        output.forEach(function (row) {
             row.startDate = new Date(2018, 3, 23);
         });
 
-        assert (_.isEqual (expectedOutput1, output), 
-            'output should match expected output.');
+        assert(_.isEqual(expectedOutput1, output),
+                'output should match expected output.');
     });
 
-
-    var expectedResultFormat1 = [ 
-      { 'ownerId': 'MC',
-        'dateAdded': new Date(2018, 3, 23),
-        'data': {id: '1', column1: 'c2', column2: 'c3' },
-        'sourceExportable': true,
-        'exportable': true      },
-
-      { 'ownerId': 'MC',
-        'dateAdded': new Date(2018, 3, 23),
-        'data': { id: '2', column1: 'c6', column2: 'c7' },
-        'sourceExportable': true,
-        'exportable': true      },
-
-      { 'ownerId': 'MC',
-        'dateAdded': new Date(2018, 3, 23),
-        'data': { id: '3', column1: 'c10', column2: 'c11' },
-        'sourceExportable': true,
-        'exportable': true      } 
-    ];
 
 
     it('test formatResultAttrArray()', function () {
-        var h  = new HandleBinlogEvents();
-       var output = HandleBinlogEvents.formatResultAttrArray(expectedFilteredOutput1);
-        
+        var h = new HandleBinlogEvents();
+        var output = HandleBinlogEvents.formatResultAttrArray(expectedFilteredOutput1);
+
 // startDate will always be changing, so let's over-write it with
 // a constant value for test purposes.
-        output.forEach(function(row) {
+        output.forEach(function (row) {
             row.dateAdded = new Date(2018, 3, 23);
         });
 
-        assert (_.isEqual (expectedResultFormat1, output), 
-            'output should match expected output.');
+        assert(_.isEqual(expectedResultFormat1, output),
+                'output should match expected output.');
     });
-    
-    
-    
+
+
 
     it('test filteredUpdateRows()', function () {
-        var h  = new HandleBinlogEvents();
-        h.tableMap (tableMapEvent2);
-        var output = h.filteredUpdateRows(updateRowsEvent2);
+        var h = new HandleBinlogEvents();
+        h.tableMap(tableMapEvent2);
+        var output = h.filterUpdateRows(updateRowsEvent2);
 
-// startDate will always be changing, so let's over-write it with
-// a constant value for test purposes.
-        output.forEach(function(row) {
-            row.startDate = new Date(2018, 3, 23);
-        });
-
-        assert (_.isEqual (expectedOutput2, output), 
-            'output should match expected output.');
+        assert(_.isEqual(expectedFilteredOutput2, output),
+                'output should match expected output.');
     });
-    
+
+
+
     it('test filteredUpdateRows() with no changes of interest in event', function () {
-        var h  = new HandleBinlogEvents();
-        h.tableMap (tableMapEvent3);
-        var output = h.filteredUpdateRows(updateRowsEvent3);
-        assert ((output.length === 0), 'output should be empty.');
+        var h = new HandleBinlogEvents();
+        h.tableMap(tableMapEvent3);
+        var output = h.filterUpdateRows(updateRowsEvent3);
+        assert((output.length === 0), 'output should be empty.');
     });
-    
+
     it('test filteredDeleteRows()', function () {
-        var h  = new HandleBinlogEvents();
-        h.tableMap (tableMapEvent4);
+        var h = new HandleBinlogEvents();
+        h.tableMap(tableMapEvent4);
         var output = h.filteredDeleteRows(deleteRowsEvent4);
-        assert (_.isEqual (expectedOutput4, output), 
-            'output should match expected output.');
+        assert(_.isEqual(expectedOutput4, output),
+                'output should match expected output.');
     });
 
     it('test filteredDeleteRows() for table that we don\'t care about', function () {
-        var h  = new HandleBinlogEvents();
-        h.tableMap (tableMapEventDontCareTable);
+        var h = new HandleBinlogEvents();
+        h.tableMap(tableMapEventDontCareTable);
         var output = h.filteredDeleteRows(deleteRowsEvent4);
-        assert ((output.length === 0), 'output should be undefined.');
+        assert((output.length === 0), 'output should be undefined.');
     });
 });
+
 
 var MongoClient = require('mongodb').MongoClient;
 var db;
@@ -371,73 +365,6 @@ describe('test HandleBinlogEvents persistence functions', function () {
         });
     });
 
-    var tableMapEvent1 = {
-        schemaName: 'test_schema',
-        tableName: 'test_table1'
-    };
-
-    /*
-     * simulates the structures of interest in the zongji WriteRows event.
-     */
-    var writeRowsEvent1 = {
-        rows: [
-            {
-                id: '1',
-                column1: 'c2',
-                column2: 'c3',
-                column3: 'c4',
-                column4: 'c5'
-            }, {
-                id: '2',
-                column1: 'c6',
-                column2: 'c7',
-                column3: 'c8',
-                column4: 'c9'
-            }, {
-                id: '3',
-                column1: 'c10',
-                column2: 'c11',
-                column3: 'c12',
-                column4: 'c13'
-            }
-        ]
-    };
-
-
-    var expectedOutput1 = [
-        {data: {id: '1', column1: 'c2', column2: 'c3'},
-            startDate: new Date(2018, 3, 23),
-            endDate: PersistenceSpecs.getSurrogateHighDate()},
-
-        {data: {id: '2', column1: 'c6', column2: 'c7'},
-            startDate: new Date(2018, 3, 23),
-            endDate: PersistenceSpecs.getSurrogateHighDate()},
-
-        {data: {id: '3', column1: 'c10', column2: 'c11'},
-            startDate: new Date(2018, 3, 23),
-            endDate: PersistenceSpecs.getSurrogateHighDate()}
-    ];
-
-
-    var expectedResultFormat1 = [
-        {'ownerId': 'MC',
-            'dateAdded': new Date(2018, 3, 23),
-            'data': {id: '1', column1: 'c2', column2: 'c3'},
-            'sourceExportable': true,
-            'exportable': true},
-
-        {'ownerId': 'MC',
-            'dateAdded': new Date(2018, 3, 23),
-            'data': {id: '2', column1: 'c6', column2: 'c7'},
-            'sourceExportable': true,
-            'exportable': true},
-
-        {'ownerId': 'MC',
-            'dateAdded': new Date(2018, 3, 23),
-            'data': {id: '3', column1: 'c10', column2: 'c11'},
-            'sourceExportable': true,
-            'exportable': true}
-    ];
 
     it('test persistWriteRows()', function (done) {
         var h = new HandleBinlogEvents();

@@ -175,6 +175,17 @@ function formatResultAttrArray (rows) {
     return (output);
 };
 
+/*
+ * persistWriteRows - persist an array of rows to data warehouse
+ * mongo collection and to the result-xxx mongo collection.
+ * 
+ * 
+ * @param {type} db  - connection provided by MongoClient.connect()
+ * @param {type} data - array of row objects formatted for data warehouse
+ * @param {type} rsData - array of row objects formatted for result-xxx collection
+ * @param {type} cb  - function called when insert is complete
+ * @returns {undefined}
+ */
 
 HandleBinlogEvents.prototype.persistWriteRows = function (db, data, rsData, cb) {
     if ((!data) || data.length === 0) return;   
@@ -190,6 +201,14 @@ HandleBinlogEvents.prototype.persistWriteRows = function (db, data, rsData, cb) 
     });
 };
 
+/*
+ * handleWriteRows - accepts a WriteRows binlog event and 
+ * persists to MongoDB collections.
+ * 
+ * @param {type} db
+ * @param {type} event
+ * @returns {undefined}
+ */
 HandleBinlogEvents.prototype.handleWriteRows = function (db, event) {
     var filteredData = this.filterWriteRows(event);
     var dwData = formatDWAttrArray(filteredData);
@@ -221,20 +240,82 @@ HandleBinlogEvents.prototype.handleWriteRows = function (db, event) {
  *  must use date.getTime() function.
  */
  
-HandleBinlogEvents.prototype.filteredUpdateRows = function (event) {
+//HandleBinlogEvents.prototype.filteredUpdateRows = function (event) {
+//    var specs = this.persistenceSpecs;
+//    if (!specs.requireCurrentTable()) return [];
+//    
+//    var output = [];
+//    event.rows.forEach(function(row) {
+//        var rowOutput = { data: {} };
+//
+//// optimization: emit empty row if there are no changes in the columns
+////  of interest.
+//        var changeFound = false;
+//        Object.keys(row.before).forEach(function(name) {
+//            if (specs.requireColumn (name)) {
+//                rowOutput.data[name] = row.after[name];
+//                
+//                var before = row.before[name];
+//                var after = row.after[name];
+//
+//                if ((before !== null) && (before.constructor === Date)) {
+//                    if (before.getTime() !== after.getTime()) {
+////                        console.log ('dates diff %s value %s -> %s', name, before, after);
+//                        changeFound = true;
+//                    }
+//                } else {
+//                    if (before !== after) {
+////                        console.log ('diff %s value %s -> %s', name, before, after);
+//                        changeFound = true;
+//                    }
+//                }
+//            }
+//        });
+//        
+//        if (changeFound) {
+//            rowOutput.startDate = new Date();
+//            rowOutput.endDate = PersistenceSpecs.getSurrogateHighDate();
+//            output.push (rowOutput);
+//        }
+//    });    
+//    return (output);
+//};
+
+
+/*
+ * filterUpdateRows - iterates through rows and columns of binlog UpdateRows event.
+ * For each column listed in the spec, creates an array of objects like:
+ * 
+ * {
+ *      column1: value,
+ *      column4: value,
+ *      .
+ *      .
+ *      .
+ *      columnn: value
+ * }
+ * 
+ *  that can be persisted to a MongoDB collection.
+ *  
+ *  optimization: emit empty row if there are no changes in the columns
+ *  of interest. Note that if value is a date object, comparison
+ *  must use date.getTime() function.
+ */
+ 
+HandleBinlogEvents.prototype.filterUpdateRows = function (event) {
     var specs = this.persistenceSpecs;
     if (!specs.requireCurrentTable()) return [];
     
     var output = [];
     event.rows.forEach(function(row) {
-        var rowOutput = { data: {} };
+        var rowOutput = {};
 
 // optimization: emit empty row if there are no changes in the columns
 //  of interest.
         var changeFound = false;
         Object.keys(row.before).forEach(function(name) {
             if (specs.requireColumn (name)) {
-                rowOutput.data[name] = row.after[name];
+                rowOutput[name] = row.after[name];
                 
                 var before = row.before[name];
                 var after = row.after[name];
@@ -254,42 +335,52 @@ HandleBinlogEvents.prototype.filteredUpdateRows = function (event) {
         });
         
         if (changeFound) {
-            rowOutput.startDate = new Date();
-            rowOutput.endDate = PersistenceSpecs.getSurrogateHighDate();
-            output.push (rowOutput);
+           output.push (rowOutput);
         }
     });    
     return (output);
 };
 
 
-HandleBinlogEvents.prototype.persistUpdateRows = function (db, data) {
-    if ((!data) || data.length === 0) return;   
-    var collectionName = this.persistenceSpecs.getMongoCollectionName();
-    if (!collectionName) return;
+HandleBinlogEvents.prototype.persistUpdateRows = function (db, dwData, rsData) {
+    if ((!dwData) || dwData.length === 0) return;   
+    var dwCollectionName = this.persistenceSpecs.getMongoCollectionName();
+    if (!dwCollectionName) return;
     
-    var collection = db.collection(collectionName);
+    var dwCollection = db.collection(dwCollectionName);
     var primaryKey = this.persistenceSpecs.getPrimaryKey();
     
 // if there are multiple rows in the update event, they must be for the
 // same schema and table.
-    data.forEach (function (row) {
-        
+    dwData.forEach (function (row) {
+        // find the existing row with the matching primary key value
+        // and mark it as expired by setting the endDate to the new
+        // row's startDate.
         var query = {};
         query['data.'.concat(primaryKey)] = row.data[primaryKey];
         query.endDate = PersistenceSpecs.getSurrogateHighDate();
-        collection.update (query, {$set: {endDate: row.startDate}}, 
+        
+        dwCollection.update (query, {$set: {endDate: row.startDate}}, 
             function(err, result) {
                 if (err) {
                     console.log(err.message);
                 }
             });
     
-        collection.insert(row, {w:1}, function(err, result) {
+        // insert the new row into the collection
+        dwCollection.insert(row, {w:1}, function(err, result) {
                 if (err) {
                     console.log(err.message);
                 }
             });
+    });
+    
+    rsData.forEach (function (row) {
+        // replace the contents of the existing row matching the primary key 
+        // with the new row
+        var query = {};
+        query['data.'.concat(primaryKey)] = row.data[primaryKey];
+        rsCollection.replaceOne (query, row);
     });
 };
 
