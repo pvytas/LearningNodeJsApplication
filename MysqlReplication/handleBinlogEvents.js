@@ -209,12 +209,14 @@ HandleBinlogEvents.prototype.persistWriteRows = function (db, data, rsData, cb) 
  * @param {type} event
  * @returns {undefined}
  */
-HandleBinlogEvents.prototype.handleWriteRows = function (db, event) {
+HandleBinlogEvents.prototype.handleWriteRows = function (db, event, cb) {
     var filteredData = this.filterWriteRows(event);
     var dwData = formatDWAttrArray(filteredData);
     var rsData = formatResultAttrArray(filteredData);
 
-    this.persistWriteRows(db, dwData, rsData, function (err) { });
+    this.persistWriteRows(db, dwData, rsData, function(err, result) {
+        if (!(cb === undefined)) cb(err);
+    });   
 };
 
 /*
@@ -375,16 +377,31 @@ HandleBinlogEvents.prototype.persistUpdateRows = function (db, dwData, rsData) {
             });
     });
     
+    var rsCollection = db.collection('result-' + dwCollectionName);
     rsData.forEach (function (row) {
-        // replace the contents of the existing row matching the primary key 
-        // with the new row
+        // in the results-xx collection, replace the contents of the 
+        // existing row matching the primary key with the new row
         var query = {};
         query['data.'.concat(primaryKey)] = row.data[primaryKey];
         rsCollection.replaceOne (query, row);
     });
 };
 
+/*
+ * handleUpdateRows - accepts an UpdateRows binlog event and 
+ * persists to MongoDB collections.
+ * 
+ * @param {type} db
+ * @param {type} event
+ * @returns {undefined}
+ */
+HandleBinlogEvents.prototype.handleUpdateRows = function (db, event) {
+    var filteredData = this.filterUpdateRows(event);
+    var dwData = formatDWAttrArray(filteredData);
+    var rsData = formatResultAttrArray(filteredData);
 
+    this.persistUpdateRows(db, dwData, rsData);
+};
 
 /*
  * filteredDeleteRows - iterates through rows and columns of binlog DeleteRows event.
@@ -449,8 +466,28 @@ HandleBinlogEvents.prototype.persistDeleteRows = function (db, data) {
 }; 
 
 
+/*
+ * handleDeleteRows - accepts an DeleteRows binlog event and 
+ * persists to MongoDB collections.
+ * 
+ * @param {type} db
+ * @param {type} event
+ * @returns {undefined}
+ */
+HandleBinlogEvents.prototype.handleDeleteRows = function (db, event) {
+    //rows data is in same format as WriteRows event
+    var filteredData = this.filterWriteRows(event);
+    var dwData = formatDWAttrArray(filteredData);
+    var rsData = formatResultAttrArray(filteredData);
+
+    this.persistDeleteRows(db, dwData, rsData);
+};
+
+
 module.exports = HandleBinlogEvents;
 module.exports.formatDWAttr = formatDWAttr;
 module.exports.formatDWAttrArray = formatDWAttrArray;
 module.exports.formatResultAttr = formatResultAttr;
 module.exports.formatResultAttrArray = formatResultAttrArray;
+
+

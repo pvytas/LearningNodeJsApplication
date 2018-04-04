@@ -1,7 +1,19 @@
 /* 
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
+ * Copyright (C) Bitnobi Inc. - All Rights Reserved.
+ * Unauthorized copying of this file, via any medium is strictly prohibited
+ * Proprietary and confidential
+ * Written by   , March 2018.
+ */
+
+/*
+ * mysqlReplTest - exercises the mysqlReplication module.
+ * 
+ * Connects to a remote MySQL database, accepts replication events with 
+ * mysqlReplication and displays binlog replication events to the console
+ * 
+ * Depends on configuration of MySQL server to generate RowFormat replication.
+ * User must execute scripts on MySQL server to generate replication
+ * events.
  */
 
 var mysqlReplication = require('../mysqlReplication');

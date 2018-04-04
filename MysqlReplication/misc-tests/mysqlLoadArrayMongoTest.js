@@ -7,7 +7,7 @@
 
 /*
  * This test exercised loadFromMysql.js by loading the contents of the
- * `clients_booking` table into mongoDB MC_clients_booking collection.
+ * tables described in persistenceSpecs into mongoDB  collections.
  */
 
 var mysql = require('mysql');

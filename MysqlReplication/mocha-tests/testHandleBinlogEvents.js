@@ -118,6 +118,8 @@ var tableMapEvent2 = {
 
 /*
  * simulates the structures of interest in the zongji UpdateRows event.
+ * The "before" sections of updateRowsEvent2 correspond to the data 
+ * in writeRowsEvent1.
  */
 var updateRowsEvent2 = {
     rows: [
@@ -181,6 +183,49 @@ var expectedFilteredOutput2 = [
 //  should not generate row if no columns of interest have changed.
 //  { id: '2', column1: 'c6', column2: 'c7' }},
     {id: '3', column1: 'c10', column2: 'updated'}
+];
+
+var expectedDWOutput2 = [
+    {data: {id: '1', column1: 'c2', column2: 'c3'},
+        startDate: new Date(2018, 3, 23),
+        endDate: new Date(2018, 3, 23)},
+
+    {data: {id: '2', column1: 'c6', column2: 'c7'},
+        startDate: new Date(2018, 3, 23),
+        endDate: PersistenceSpecs.getSurrogateHighDate()},
+
+    {data: {id: '3', column1: 'c10', column2: 'c11'},
+        startDate: new Date(2018, 3, 23),
+        endDate: new Date(2018, 3, 23)},
+    
+    {data: {id: '1', column1: 'updated', column2: 'c3'},
+        startDate: new Date(2018, 3, 23),
+        endDate: PersistenceSpecs.getSurrogateHighDate()},
+
+    {data: {id: '3', column1: 'c10', column2: 'updated'},
+        startDate: new Date(2018, 3, 23),
+        endDate: PersistenceSpecs.getSurrogateHighDate()}
+];
+
+
+var expectedResultFormat2 = [
+    {'ownerId': 'MC',
+        'dateAdded': new Date(2018, 3, 23),
+        'data': {id: '1', column1: 'updated', column2: 'c3'},
+        'sourceExportable': true,
+        'exportable': true},
+
+    {'ownerId': 'MC',
+        'dateAdded': new Date(2018, 3, 23),
+        'data': {id: '2', column1: 'c6', column2: 'c7'},
+        'sourceExportable': true,
+        'exportable': true},
+
+    {'ownerId': 'MC',
+        'dateAdded': new Date(2018, 3, 23),
+        'data': {id: '3', column1: 'c10', column2: 'updated'},
+        'sourceExportable': true,
+        'exportable': true}
 ];
 
 
@@ -312,7 +357,7 @@ describe('test HandleBinlogEvents filtering and formatting functions', function 
 
 
 
-    it('test filteredUpdateRows()', function () {
+    it('test filterUpdateRows()', function () {
         var h = new HandleBinlogEvents();
         h.tableMap(tableMapEvent2);
         var output = h.filterUpdateRows(updateRowsEvent2);
@@ -323,26 +368,11 @@ describe('test HandleBinlogEvents filtering and formatting functions', function 
 
 
 
-    it('test filteredUpdateRows() with no changes of interest in event', function () {
+    it('test filterUpdateRows() with no changes of interest in event', function () {
         var h = new HandleBinlogEvents();
         h.tableMap(tableMapEvent3);
         var output = h.filterUpdateRows(updateRowsEvent3);
         assert((output.length === 0), 'output should be empty.');
-    });
-
-    it('test filteredDeleteRows()', function () {
-        var h = new HandleBinlogEvents();
-        h.tableMap(tableMapEvent4);
-        var output = h.filteredDeleteRows(deleteRowsEvent4);
-        assert(_.isEqual(expectedOutput4, output),
-                'output should match expected output.');
-    });
-
-    it('test filteredDeleteRows() for table that we don\'t care about', function () {
-        var h = new HandleBinlogEvents();
-        h.tableMap(tableMapEventDontCareTable);
-        var output = h.filteredDeleteRows(deleteRowsEvent4);
-        assert((output.length === 0), 'output should be undefined.');
     });
 });
 
@@ -365,15 +395,10 @@ describe('test HandleBinlogEvents persistence functions', function () {
         });
     });
 
-
     it('test persistWriteRows()', function (done) {
         var h = new HandleBinlogEvents();
         h.tableMap(tableMapEvent1);
-        var filteredData = h.filterWriteRows(writeRowsEvent1);
-        var dwData = HandleBinlogEvents.formatDWAttrArray(filteredData);
-        var rsData = HandleBinlogEvents.formatResultAttrArray(filteredData);
-
-        h.persistWriteRows(db, dwData, rsData, function (err) {
+        h.handleWriteRows(db, writeRowsEvent1, function (err) {
             var collection = db.collection('MC-test-table1');
             collection.find().toArray(function (err, output) {
                 // startDate will always be changing, so let's over-write it with
@@ -383,11 +408,9 @@ describe('test HandleBinlogEvents persistence functions', function () {
                     delete row._id;
                 });
                 assert(_.isEqual(expectedOutput1, output),
-                        'output should match expected output.');
-
+                        'MC-test-table1 should match expected output.');
                 //cleanup what we have inserted.
                 collection.drop();
-
                 var rsCollection = db.collection('result-MC-test-table1');
                 rsCollection.find().toArray(function (err, output) {
                     // startDate will always be changing, so let's over-write it with
@@ -397,8 +420,7 @@ describe('test HandleBinlogEvents persistence functions', function () {
                         delete row._id;
                     });
                     assert(_.isEqual(expectedResultFormat1, output),
-                            'output should match expected output.');
-
+                            'result-MC-test-table1 should match expected output.');
                     //cleanup what we have inserted.
                     rsCollection.drop();
                     done();
@@ -406,10 +428,58 @@ describe('test HandleBinlogEvents persistence functions', function () {
             });
         });
     });
-    
-    
+
+    it('test updateWriteRows()', function (done) {
+        var h = new HandleBinlogEvents();
+        h.tableMap(tableMapEvent1);
+        h.handleWriteRows(db, writeRowsEvent1, function (err) {
+            // there should now be some entries in 'MC-test-table1' 
+            // and 'result-MC-test-table1'
+
+            h.tableMap(tableMapEvent2);
+            h.handleUpdateRows(db, updateRowsEvent2);
+            
+            setTimeout(function () {
+
+                var collection = db.collection('MC-test-table1');
+                collection.find().toArray(function (err, output) {
+                    // startDate will always be changing, so let's over-write it with
+                    // a constant value for comparison purposes. Also delete the _id field.
+                    output.forEach(function (row) {
+                        row.startDate = new Date(2018, 3, 23);
+                        delete row._id;
+                        if (row.endDate.getTime() !==
+                                PersistenceSpecs.getSurrogateHighDate().getTime()) {
+                            row.endDate = new Date(2018, 3, 23);
+                        }
+                    });
+                    
+                    assert(_.isEqual(expectedDWOutput2, output),
+                            'MC-test-table1 should match expected output.');
+                    //cleanup what we have inserted.
+                    collection.drop();
+                    var rsCollection = db.collection('result-MC-test-table1');
+                    rsCollection.find().toArray(function (err, output) {
+                        // startDate will always be changing, so let's over-write it with
+                        // a constant value for comparison purposes. Also delete the _id field.
+                        output.forEach(function (row) {
+                            row.dateAdded = new Date(2018, 3, 23);
+                            delete row._id;
+                        });
+                        assert(_.isEqual(expectedResultFormat2, output),
+                                'result-MC-test-table1 should match expected output.');
+                        //cleanup what we have inserted.
+                        rsCollection.drop();
+                        done();
+                    });
+                });
+            });
+        }, 200);
+
+    });
+
     //After all tests are finished close the database connection.
-    after(function(done){
+    after(function (done) {
         db.close();
         done();
     });

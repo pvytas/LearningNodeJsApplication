@@ -5,6 +5,12 @@
  * Written by   , March 2018.
  */
 
+
+/*
+ * Data Source Name (DSN) for connecting to MySQL database for test 
+ * purposes. Use by unit tests in this directory.
+ */
+
 'use strict';
 
 module.exports = {
