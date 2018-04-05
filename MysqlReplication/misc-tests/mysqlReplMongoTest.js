@@ -25,7 +25,7 @@ var db = {};
 
 mysqlReplication.init(
 // Pass the connection settings
-        testConfig.dsn,
+        testConfig.mysqlDsn,
         
 // Pass the options
 // Must include rotate events for binlogName and binlogNextPos properties
@@ -49,13 +49,11 @@ mysqlReplication.init(
                   break;
                   
                 case 'UpdateRows':
-                  var data = h.filteredUpdateRows(event);
-                  h.persistUpdateRows (db, data);                 
+                  h.handleUpdateRows (db, event);
                   break;
                   
                 case 'DeleteRows':
-                  var data = h.filteredDeleteRows(event);
-                  h.persistDeleteRows (db, data);                 
+                  h.handleDeleteRows (db, event);
                   break;
                   
                 default:
@@ -74,7 +72,7 @@ process.on('SIGINT', function () {
 
 
 // Connect to the db
-MongoClient.connect("mongodb://localhost:27017/exampleDb", function(err, new_db) {
+MongoClient.connect(testConfig.mongoUrl, function(err, new_db) {
     if(err) { return console.dir(err); }
 
     db = new_db;

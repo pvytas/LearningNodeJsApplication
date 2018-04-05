@@ -8,7 +8,7 @@ var mysql = require('mysql');
 var stream = require('stream');
 var testConfig = require('./testConfig');
 
-var connection = mysql.createConnection(testConfig.dsn);
+var connection = mysql.createConnection(testConfig.mysqlDsn);
 
 
 connection.connect(function (err) {

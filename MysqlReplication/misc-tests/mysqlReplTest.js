@@ -22,7 +22,7 @@ var testConfig = require('./testConfig');
 mysqlReplication.init(
         
 // Pass the connection settings
-        testConfig.dsn,
+        testConfig.mysqlDsn,
         
 // Pass the options
 // Must include rotate events for binlogName and binlogNextPos properties

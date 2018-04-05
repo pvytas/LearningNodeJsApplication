@@ -31,18 +31,20 @@ process.on('SIGINT', function () {
 
 
 // Connect to the db
-MongoClient.connect("mongodb://localhost:27017/exampleDb", function (err, new_db) {
+MongoClient.connect(testConfig.mongoUrl, function (err, new_db) {
     if (err) {
+        console.log('Error connecting to MongoDB database.');
         return console.dir(err);
     }
 
     db = new_db;
-    connection = mysql.createConnection(testConfig.dsn);
+    connection = mysql.createConnection(testConfig.mysqlDsn);
 
     connection.connect(function (err) {
         if (err) {
-            console.log('Error connecting to Db');
+            console.log('Error connecting to MySQL database.');
             console.log(err);
+            db.close();
             return;
         }
         console.log('Connection established');

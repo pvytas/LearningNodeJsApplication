@@ -16,7 +16,7 @@
  */
 
 
-PersistenceSpecs = require ("./persistenceSpecs");
+var PersistenceSpecs = require ("./persistenceSpecs");
 
 function HandleBinlogEvents () {
 };
@@ -205,8 +205,8 @@ HandleBinlogEvents.prototype.persistWriteRows = function (db, data, rsData, cb) 
  * handleWriteRows - accepts a WriteRows binlog event and 
  * persists to MongoDB collections.
  * 
- * @param {type} db
- * @param {type} event
+ * @param {type} db - connection provided by MongoClient.connect()
+ * @param {type} event - binlog WriteRows event
  * @returns {undefined}
  */
 HandleBinlogEvents.prototype.handleWriteRows = function (db, event, cb) {
@@ -218,70 +218,6 @@ HandleBinlogEvents.prototype.handleWriteRows = function (db, event, cb) {
         if (!(cb === undefined)) cb(err);
     });   
 };
-
-/*
- * filteredUpdateRows - iterates through rows and columns of binlog UpdateRows event.
- * For each column listed in the spec, creates an array of objects like:
- * 
- * {
- *    data: [
- *      column1: value,
- *      column4: value,
- *      .
- *      .
- *      .
- *      columnn: value ],
- *    startDate: current_date,
- *    endDate: max_date
- * }
- * 
- *  that can be persisted to a MongoDB collection.
- *  
- *  optimization: emit empty row if there are no changes in the columns
- *  of interest. Note that if value is a date object, comparison
- *  must use date.getTime() function.
- */
- 
-//HandleBinlogEvents.prototype.filteredUpdateRows = function (event) {
-//    var specs = this.persistenceSpecs;
-//    if (!specs.requireCurrentTable()) return [];
-//    
-//    var output = [];
-//    event.rows.forEach(function(row) {
-//        var rowOutput = { data: {} };
-//
-//// optimization: emit empty row if there are no changes in the columns
-////  of interest.
-//        var changeFound = false;
-//        Object.keys(row.before).forEach(function(name) {
-//            if (specs.requireColumn (name)) {
-//                rowOutput.data[name] = row.after[name];
-//                
-//                var before = row.before[name];
-//                var after = row.after[name];
-//
-//                if ((before !== null) && (before.constructor === Date)) {
-//                    if (before.getTime() !== after.getTime()) {
-////                        console.log ('dates diff %s value %s -> %s', name, before, after);
-//                        changeFound = true;
-//                    }
-//                } else {
-//                    if (before !== after) {
-////                        console.log ('diff %s value %s -> %s', name, before, after);
-//                        changeFound = true;
-//                    }
-//                }
-//            }
-//        });
-//        
-//        if (changeFound) {
-//            rowOutput.startDate = new Date();
-//            rowOutput.endDate = PersistenceSpecs.getSurrogateHighDate();
-//            output.push (rowOutput);
-//        }
-//    });    
-//    return (output);
-//};
 
 
 /*
@@ -387,12 +323,13 @@ HandleBinlogEvents.prototype.persistUpdateRows = function (db, dwData, rsData) {
     });
 };
 
+
 /*
  * handleUpdateRows - accepts an UpdateRows binlog event and 
  * persists to MongoDB collections.
  * 
- * @param {type} db
- * @param {type} event
+ * @param {type} db - connection provided by MongoClient.connect()
+ * @param {type} event - binlog UpdateRows event
  * @returns {undefined}
  */
 HandleBinlogEvents.prototype.handleUpdateRows = function (db, event) {
@@ -403,65 +340,38 @@ HandleBinlogEvents.prototype.handleUpdateRows = function (db, event) {
     this.persistUpdateRows(db, dwData, rsData);
 };
 
-/*
- * filteredDeleteRows - iterates through rows and columns of binlog DeleteRows event.
- * For each column listed in the spec, creates an array of objects like:
- * 
- * {
- *    data: [
- *      column1: value,
- *      column4: value,
- *      .
- *      .
- *      .
- *      columnn: value ],
- * }
- * 
- *  that can be persisted to a MongoDB collection.
- */
- 
-HandleBinlogEvents.prototype.filteredDeleteRows = function (event) {
-    var specs = this.persistenceSpecs;
-    if (!specs.requireCurrentTable()) return [];
+
+
+HandleBinlogEvents.prototype.persistDeleteRows = function (db, dwData, rsData) {
+    if ((!dwData) || dwData.length === 0) return;   
+    var dwCollectionName = this.persistenceSpecs.getMongoCollectionName();
+    if (!dwCollectionName) return;
     
-    var output = [];
-    event.rows.forEach(function(row) {
-        var rowOutput = { data: {} };
-
-        Object.keys(row).forEach(function(name) {
-          if (specs.requireColumn (name)) {
-              rowOutput.data[name] = row[name];
-          }
-        });
-                
-        output.push (rowOutput);               
-    });    
-    return (output);
-};
-
-
-
-HandleBinlogEvents.prototype.persistDeleteRows = function (db, data) {
-    if ((!data) || data.length === 0) return;   
-    var collectionName = this.persistenceSpecs.getMongoCollectionName();
-    if (!collectionName) return;
-    
-    var collection = db.collection(collectionName);
+    var dwCollection = db.collection(dwCollectionName);
     var primaryKey = this.persistenceSpecs.getPrimaryKey();
+
     
 // if there are multiple rows in the update event, they must be for the
 // same schema and table.
-    data.forEach (function (row) {
-        
+    dwData.forEach (function (row) {       
         var query = {};
         query['data.'.concat(primaryKey)] = row.data[primaryKey];
         query.endDate = PersistenceSpecs.getSurrogateHighDate();
-        collection.update (query, {$set: {endDate: new Date()}}, 
+        dwCollection.update (query, {$set: {endDate: new Date()}}, 
             function(err, result) {
                 if (err) {
                     console.log(err.message);
                 }
             });
+    });
+    
+    var rsCollection = db.collection('result-' + dwCollectionName);
+    rsData.forEach (function (row) {
+        // in the results-xx collection, delete the row matching the 
+        // primary key with the new row
+        var query = {};
+        query['data.'.concat(primaryKey)] = row.data[primaryKey];
+        rsCollection.deleteOne (query);
     });
 }; 
 
@@ -470,8 +380,8 @@ HandleBinlogEvents.prototype.persistDeleteRows = function (db, data) {
  * handleDeleteRows - accepts an DeleteRows binlog event and 
  * persists to MongoDB collections.
  * 
- * @param {type} db
- * @param {type} event
+ * @param {type} db - connection provided by MongoClient.connect()
+ * @param {type} event - binlog DeleteRows event
  * @returns {undefined}
  */
 HandleBinlogEvents.prototype.handleDeleteRows = function (db, event) {
