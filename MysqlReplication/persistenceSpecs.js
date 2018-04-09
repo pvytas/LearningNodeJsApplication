@@ -147,8 +147,23 @@ PersistenceSpecs.prototype.getPrimaryKey = function () {
     return false;
 };
 
+
+function getMongoCollectionNameArray() {
+    var mongoCollectionNameArray = [];
+
+    schemaReplicationSpecs.forEach(function (tableSpec) {
+        mongoCollectionNameArray.push(tableSpec.mongoCollectionName);
+    });
+
+    return mongoCollectionNameArray;
+}
+
+
+
+
 module.exports = PersistenceSpecs;
 module.exports.loadSpecs = loadSpecs;
 module.exports.getSurrogateHighDate = getSurrogateHighDate;
 module.exports.schemaReplicationSpecs = schemaReplicationSpecs;
+module.exports.getMongoCollectionNameArray = getMongoCollectionNameArray;
 

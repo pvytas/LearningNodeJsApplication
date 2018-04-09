@@ -4,7 +4,7 @@
 
 var assert = require("assert");
 var PersistenceSpecs = require ('../persistenceSpecs');
-
+var _ = require('lodash');
 
 var testSpecs = [
     {
@@ -78,6 +78,13 @@ describe('test PersistenceSpecs', function () {
         assert(!testSpec.getPrimaryKey(), 'Should return false for \'unknown_schema.test_table2\'');
     });
 
+
+    it('test getMongoCollectionNameArray()', function () {
+        var nameArray = PersistenceSpecs.getMongoCollectionNameArray();
+        
+        assert(_.isEqual(nameArray, ['MC-test-table1', 'MC-test-table2']), 
+            'name array should match expected values.');
+    });
 
 
 });
