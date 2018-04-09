@@ -18,6 +18,7 @@ var PersistenceSpecs = require ("./persistenceSpecs");
 var HandleBinlogEvents = require ("./handleBinlogEvents");
 var mysql = require('mysql');
 var stream = require('stream');
+var Q = require("q");
 
 function LoadFromMysql (mysqlDsn) {
     this.mysqlDsn = mysqlDsn;
@@ -56,6 +57,36 @@ function mysqlSelectFromSpec (spec) {
     return output;
 }
 
+/*
+ * dropMongoCollection  - drops the MongDB collection named in the
+ * spec along with associated result-xxx collection.
+ * 
+ * This function is called before calling loadFromMysql to remove any
+ * extraneous data from the collections prior to loading new data.
+ * 
+ * spec       - persistence specification for one table to be copied
+ * db         - open MongoDB connection (destination)
+ * done       - function called when all rows are copied.
+ * 
+ */
+function dropMongoCollection(spec, db) {
+    var deferred = Q.defer();
+    var dwCollection = db.collection(spec.mongoCollectionName);
+    dwCollection.drop(function (err, delOK) {
+        if (err) {
+            deferred.reject(err);
+        }
+        var rsCollection = db.collection('result-' + spec.mongoCollectionName);
+        rsCollection.drop(function (err, delOK) {
+            if (err) {
+                deferred.reject(err);
+            }
+
+            deferred.resolve();
+        });
+    });
+    return deferred.promise;
+}
 
 /*
  * loadFromMysql  - selects data from a MySQL database and persists it to
@@ -72,7 +103,7 @@ function mysqlSelectFromSpec (spec) {
  */
    
     
-function loadMysqlFromSpec(connection, spec, db, i, done) {
+function loadFromMysql (connection, spec, db, i, done) {
     connection.query(mysqlSelectFromSpec(spec))
             .stream()
             .pipe(stream.Transform({
@@ -99,7 +130,7 @@ function loadMysqlFromSpec(connection, spec, db, i, done) {
 
 
 /*
- * loadFromMysqlArray  - selects data from a MySQL database and persists it to
+ * loadFromMysqlMany  - selects data from a MySQL database and persists it to
  * MongoDB collections. The name of the schemas, tables and columns to be
  * extracted as well as the target MongoDB collection names are specified
  * in an array of specification objects (see module persistenceSpecs).
@@ -111,10 +142,10 @@ function loadMysqlFromSpec(connection, spec, db, i, done) {
  * 
  */
 
-function loadMysqlFromSpecArray(connection, specArray, db, done) {
+function loadFromMysqlMany (connection, specArray, db, done) {
     if (specArray.length > 0) {
         var loop = function (connection, specArray, db, i, done) {
-            loadMysqlFromSpec(connection, specArray[i], db, i, function () {
+            loadFromMysql(connection, specArray[i], db, i, function () {
                 if (++i < specArray.length) {
                     setTimeout(function () {
                         loop(connection, specArray, db, i, done);
@@ -133,5 +164,7 @@ function loadMysqlFromSpecArray(connection, specArray, db, done) {
 
 module.exports = LoadFromMysql;
 module.exports.mysqlSelectFromSpec = mysqlSelectFromSpec;
-module.exports.loadMysqlFromSpec = loadMysqlFromSpec;
-module.exports.loadMysqlFromSpecArray = loadMysqlFromSpecArray;
+module.exports.dropMongoCollection = dropMongoCollection;
+module.exports.loadFromMysql = loadFromMysql;
+module.exports.loadFromMysqlMany = loadFromMysqlMany;
+

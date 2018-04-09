@@ -70,7 +70,7 @@ MongoClient.connect(testConfig.mongoUrl, function (err, new_db) {
         console.log('Connection established');
     });
 
-    LoadFromMysql.loadMysqlFromSpec(connection, spec, db, 1, function () {
+    LoadFromMysql.loadFromMysql(connection, spec, db, 1, function () {
         console.log('done');
 
         connection.end(function (err) {

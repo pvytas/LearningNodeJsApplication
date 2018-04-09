@@ -50,7 +50,7 @@ MongoClient.connect(testConfig.mongoUrl, function (err, new_db) {
         console.log('Connection established');
     });
 
-    LoadFromMysql.loadMysqlFromSpecArray(connection, 
+    LoadFromMysql.loadFromMysqlMany(connection, 
     PersistenceSpecs.schemaReplicationSpecs, db, function () {
         console.log('done');
 
