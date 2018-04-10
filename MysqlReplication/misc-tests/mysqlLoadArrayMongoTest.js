@@ -48,16 +48,17 @@ MongoClient.connect(testConfig.mongoUrl, function (err, new_db) {
             return;
         }
         console.log('Connection established');
-    });
 
-    LoadFromMysql.loadFromMysqlMany(connection, 
-    PersistenceSpecs.schemaReplicationSpecs, db, function () {
-        console.log('done');
+        LoadFromMysql.loadFromMysqlMany(connection,
+                PersistenceSpecs.schemaReplicationSpecs, db)
+                .then(function () {
+                    console.log('done');
 
-        connection.end(function (err) {
-        });
+                    connection.end(function (err) {
+                    });
 
-        db.close();
+                    db.close();
+                });
     });
 });
 

@@ -20,7 +20,7 @@ process.on('uncaughtException', function (err) {
 var config = require('./config');
 
 
-var app = require('./express')();
+var app = require('./mysqlReplicationRoutes')();
 
 app.get('server').listen(config.replicationServerPort);
 console.log('mysqlReplicationServer up and running at localhost:%s', config.replicationServerPort);

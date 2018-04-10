@@ -37,7 +37,7 @@ var spec = {
         'returns_to_work',
         'reason_to_rtw',
         'monthly_claim_benefit',
-        'service_cost',
+        'service_cost'
     ]
 };
 
@@ -59,8 +59,8 @@ MongoClient.connect(testConfig.mongoUrl, function (err, new_db) {
     }
 
     db = new_db;
-    connection = mysql.createConnection(testConfig.mysqlDsn);
 
+    connection = mysql.createConnection(testConfig.mysqlDsn);
     connection.connect(function (err) {
         if (err) {
             console.log('Error connecting to Db');
@@ -68,20 +68,13 @@ MongoClient.connect(testConfig.mongoUrl, function (err, new_db) {
             return;
         }
         console.log('Connection established');
-    });
 
-    LoadFromMysql.loadFromMysql(connection, spec, db, 1, function () {
-        console.log('done');
-
-        connection.end(function (err) {
-        });
-
-        db.close();
+        LoadFromMysql.loadFromMysql(connection, spec, db)
+                .then(function () {
+                    console.log('done');
+                    connection.end(function (err) { });
+                    db.close();
+                });
     });
 });
-
-
-
-
-
 

@@ -19,18 +19,6 @@ var LoadFromMysql = require ('../loadFromMysql');
 var _ = require('lodash');
 
 
-function collectionExists(mongoDb, collectionName, done) {
-    var deferred = Q.defer();
-    mongoDb.listCollections({name: collectionName}).toArray(function (err, items) {
-        if (items.length > 0) {
-            deferred.resolve(true);
-        }
-        deferred.resolve(false);
-    });
-
-    return deferred.promise;
-}
-
 
 
 describe('test loadFromMysql', function () {
@@ -83,7 +71,33 @@ describe('test loadFromMysql', function () {
     });
 
 
-    it('test dropMongoCollection()', function (done) {
+    it('test dropCollectionIfExists()', function (done) {
+        // create collection for 'test-collection'
+        var collectionName = 'test-collection';
+        var collection = db.collection(collectionName);
+        collection.insert({column1: 'test'}, {w: 1})
+               .then(function (err, result) {
+                    return LoadFromMysql.dropCollectionIfExists(db, collectionName);
+                })
+                .then(function () {
+                    return LoadFromMysql.collectionExists(db, collectionName);
+                })
+                .then(function (exists) {
+                    assert.equal(exists, false, 'Expecting test-collection to be dropped.');
+                    return LoadFromMysql.dropCollectionIfExists(db, collectionName);
+                })
+                .then(function (exists) {
+                    assert.equal(exists, false, 'Expecting no errors if test-collection dropped again.');
+                    done();
+                })
+                .catch(function (err) {
+                    console.log(err);
+                    done();
+                });
+    });
+
+
+    it('test dropMongoCollectionsFromSpec()', function (done) {
         // create collections for 'MC-test-table1' and 'result-MC-test-table1'
         var dwName = testSpecs[0].mongoCollectionName;
         var rwName = 'result-' + dwName;
@@ -95,21 +109,21 @@ describe('test loadFromMysql', function () {
                     return rsCollection.insert({rscolumn1: 'test'}, {w: 1});
                 })
                 .then(function (err, result) {
-                    return LoadFromMysql.dropMongoCollection(testSpecs[0], db);
+                    return LoadFromMysql.dropMongoCollectionsFromSpec(db, testSpecs[0]);
                 })
                 .then(function () {
-                    return collectionExists(db, dwName);
+                    return LoadFromMysql.collectionExists(db, dwName);
                 })
                 .then(function (exists) {
                     assert.equal(exists, false, 'Expecting MC-test-table1 to be dropped.');
-                    return collectionExists(db, rwName);
+                    return LoadFromMysql.collectionExists(db, rwName);
                 })
                 .then(function (exists) {
                     assert.equal(exists, false, 'Expecting result-MC-test-table1 to be dropped.');
                     done();
                 })
                 .catch(function (err) {
-                    console.log(err);
+                    assert.fail(1, err, 'Did not expect an error.', "!");
                     done();
                 });
     });

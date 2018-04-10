@@ -11,6 +11,8 @@
  * extracted as well as the target MongoDB collection name are specified
  * in a specification object (see module persistenceSpecs).
  * 
+ * Main entrypoint: loadFromMysqlMany()
+ * 
  */
 
 
@@ -20,9 +22,6 @@ var mysql = require('mysql');
 var stream = require('stream');
 var Q = require("q");
 
-function LoadFromMysql (mysqlDsn) {
-    this.mysqlDsn = mysqlDsn;
-}
 
 /*
  * mysqlSelectFromSpec - builds a select statement to retrieve the
@@ -58,35 +57,71 @@ function mysqlSelectFromSpec (spec) {
 }
 
 /*
- * dropMongoCollection  - drops the MongDB collection named in the
+ * collectionExists - tests if a MongoDB collections exists.
+ * 
+ * Returns a promise that resolves to true if collection exists, false
+ * if it does not.
+ * 
+ * @param {type} mongoDb
+ * @param {type} collectionName
+ * @returns {.Q@call;defer.promise}
+ */
+
+function collectionExists(mongoDb, collectionName) {
+    var deferred = Q.defer();
+    mongoDb.listCollections({name: collectionName}).toArray(function (err, items) {
+        if (items.length > 0) {
+            deferred.resolve(true);
+        };
+        deferred.resolve(false);
+    });
+
+    return deferred.promise;
+}
+
+
+function dropCollectionIfExists(mongoDb, collectionName) {
+    var deferred = Q.defer();
+    mongoDb.listCollections({name: collectionName}).toArray(function (err, items) {
+        if (items.length > 0) {
+            var collection = mongoDb.collection(collectionName);
+            collection.drop(function (err, delOK) {
+                if (err) {
+                    deferred.reject(err);
+                }
+                deferred.resolve(true);
+            });
+        }
+        deferred.resolve(false);
+    });
+    return deferred.promise;
+}
+                
+/*
+ * dropMongoCollectionsFromSpec  - drops the MongDB collection named in the
  * spec along with associated result-xxx collection.
  * 
  * This function is called before calling loadFromMysql to remove any
  * extraneous data from the collections prior to loading new data.
  * 
  * spec       - persistence specification for one table to be copied
- * db         - open MongoDB connection (destination)
- * done       - function called when all rows are copied.
+ * mongoDb         - open MongoDB connection (destination)
  * 
+ * returns a promise 
  */
-function dropMongoCollection(spec, db) {
+function dropMongoCollectionsFromSpec(mongoDb, spec) {
     var deferred = Q.defer();
-    var dwCollection = db.collection(spec.mongoCollectionName);
-    dwCollection.drop(function (err, delOK) {
-        if (err) {
-            deferred.reject(err);
-        }
-        var rsCollection = db.collection('result-' + spec.mongoCollectionName);
-        rsCollection.drop(function (err, delOK) {
-            if (err) {
-                deferred.reject(err);
-            }
 
-            deferred.resolve();
-        });
+    dropCollectionIfExists(mongoDb, spec.mongoCollectionName)
+            .then(function () {
+                return dropCollectionIfExists(mongoDb, 'result-' + spec.mongoCollectionName);
+            }).then(function () {
+                deferred.resolve();
     });
+
     return deferred.promise;
 }
+
 
 /*
  * loadFromMysql  - selects data from a MySQL database and persists it to
@@ -96,14 +131,17 @@ function dropMongoCollection(spec, db) {
  * 
  * connection - open MySQL connection (source)
  * spec       - persistence specification for one table to be copied
- * db         - open MongoDB connection (destination)
- * i          - counter variable needed for loadMysqlFromSpecArray()
+ * mongoDb         - open MongoDB connection (destination)
+ * 
+ * returns a promise
  * done       - function called when all rows are copied.
  * 
  */
    
     
-function loadFromMysql (connection, spec, db, i, done) {
+function loadFromMysql(connection, spec, mongoDb) {
+    var deferred = Q.defer();
+
     connection.query(mysqlSelectFromSpec(spec))
             .stream()
             .pipe(stream.Transform({
@@ -112,9 +150,9 @@ function loadFromMysql (connection, spec, db, i, done) {
                     var dwData = HandleBinlogEvents.formatDWAttr(row);
                     var rsData = HandleBinlogEvents.formatResultAttr(row);
 
-                    var collection = db.collection(spec.mongoCollectionName);
+                    var collection = mongoDb.collection(spec.mongoCollectionName);
                     collection.insert(dwData, {w: 1}, function (err, result) {
-                        var rsCollection = db.collection('result-' + spec.mongoCollectionName);
+                        var rsCollection = mongoDb.collection('result-' + spec.mongoCollectionName);
                         rsCollection.insert(rsData, {w: 1}, function (err, result) {
                             callback();
                         });
@@ -123,10 +161,12 @@ function loadFromMysql (connection, spec, db, i, done) {
                 }
             })
                     .on('finish', function () {
-                        if (!(done === undefined))
-                            done();
+                        deferred.resolve();
                     }));
+
+    return deferred.promise;
 }
+
 
 
 /*
@@ -137,34 +177,41 @@ function loadFromMysql (connection, spec, db, i, done) {
  * 
  * connection - open MySQL connection (source)
  * specArray  - array of persistence specifications
- * db         - open MongoDB connection (destination)
- * done       - function called when all tables are copied.
+ * mongoDb    - open MongoDB connection (destination)
  * 
  */
 
-function loadFromMysqlMany (connection, specArray, db, done) {
-    if (specArray.length > 0) {
-        var loop = function (connection, specArray, db, i, done) {
-            loadFromMysql(connection, specArray[i], db, i, function () {
-                if (++i < specArray.length) {
-                    setTimeout(function () {
-                        loop(connection, specArray, db, i, done);
-                    }, 0);
-                } else {
-                    done();
-                }
-            });
-        };
-        loop(connection, specArray, db, 0, done);
-    } else {
-        done();
-    }
+function loadFromMysqlMany(connection, specArray, mongoDb) {
+    var deferred = Q.defer();
+
+    var loop = function (index) {
+        if (index >= specArray.length) {
+            deferred.resolve();
+        } else {
+            var spec = specArray[index];
+
+            dropMongoCollectionsFromSpec(mongoDb, spec)
+                    .then(function () {
+                        return loadFromMysql(connection, spec, mongoDb);
+                    })
+                    .then(function () {
+                        loop(index + 1);
+                    });
+        }
+    };
+
+    loop(0); // Start!
+
+    return deferred.promise;
 }
 
 
-module.exports = LoadFromMysql;
 module.exports.mysqlSelectFromSpec = mysqlSelectFromSpec;
-module.exports.dropMongoCollection = dropMongoCollection;
+module.exports.collectionExists = collectionExists;
+module.exports.dropCollectionIfExists = dropCollectionIfExists;
+module.exports.dropMongoCollectionsFromSpec = dropMongoCollectionsFromSpec;
 module.exports.loadFromMysql = loadFromMysql;
+
+// main entry point:
 module.exports.loadFromMysqlMany = loadFromMysqlMany;
 

@@ -15,7 +15,7 @@
 
 module.exports = {
     mysqlDsn: {
-        host: '130.63.217.58',
+        host: '130.63.217.211',
 //        host: '10.0.1.11',
         port: '3307',
         user: 'zongji',
