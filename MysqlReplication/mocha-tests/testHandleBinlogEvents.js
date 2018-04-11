@@ -7,6 +7,10 @@ var PersistenceSpecs = require ('../persistenceSpecs');
 var HandleBinlogEvents = require ('../handleBinlogEvents');
 var _ = require('lodash');
 
+function getTestBinlogName () { return 'mysql-bin.123456'; };
+function getTestBinlogNextPos () { return 123456; };
+
+
 var testSpecs = [
     {
         schemaName: 'test_schema',
@@ -339,8 +343,8 @@ var expectedOutput4 = [
 describe('test HandleBinlogEvents filtering and formatting functions', function () {
 
     it('test filterWriteRows()', function () {
-        var h = new HandleBinlogEvents();
-        h.tableMap(tableMapEvent1);
+        var h = new HandleBinlogEvents(getTestBinlogName, getTestBinlogNextPos);
+        h.handleTableMap(tableMapEvent1);
         var output = h.filterWriteRows(writeRowsEvent1);
 
         assert(_.isEqual(expectedFilteredOutput1, output),
@@ -354,15 +358,15 @@ describe('test HandleBinlogEvents filtering and formatting functions', function 
     };
 
     it('test filterWriteRows() for table that we don\'t care about', function () {
-        var h = new HandleBinlogEvents();
-        h.tableMap(tableMapEventDontCareTable);
+        var h = new HandleBinlogEvents(getTestBinlogName, getTestBinlogNextPos);
+        h.handleTableMap(tableMapEventDontCareTable);
         var output = h.filterWriteRows(writeRowsEvent1);
         assert((output.length === 0), 'output should be undefined.');
     });
 
 
     it('test formatDWAttrArray()', function () {
-        var h = new HandleBinlogEvents();
+//        var h = new HandleBinlogEvents(getTestBinlogName, getTestBinlogNextPos);
         var output = HandleBinlogEvents.formatDWAttrArray(expectedFilteredOutput1);
 
 // startDate will always be changing, so let's over-write it with
@@ -378,7 +382,7 @@ describe('test HandleBinlogEvents filtering and formatting functions', function 
 
 
     it('test formatResultAttrArray()', function () {
-        var h = new HandleBinlogEvents();
+//        var h = new HandleBinlogEvents(getTestBinlogName, getTestBinlogNextPos);
         var output = HandleBinlogEvents.formatResultAttrArray(expectedFilteredOutput1);
 
 // startDate will always be changing, so let's over-write it with
@@ -394,8 +398,8 @@ describe('test HandleBinlogEvents filtering and formatting functions', function 
 
 
     it('test filterUpdateRows()', function () {
-        var h = new HandleBinlogEvents();
-        h.tableMap(tableMapEvent2);
+        var h = new HandleBinlogEvents(getTestBinlogName, getTestBinlogNextPos);
+        h.handleTableMap(tableMapEvent2);
         var output = h.filterUpdateRows(updateRowsEvent2);
 
         assert(_.isEqual(expectedFilteredOutput2, output),
@@ -405,8 +409,8 @@ describe('test HandleBinlogEvents filtering and formatting functions', function 
 
 
     it('test filterUpdateRows() with no changes of interest in event', function () {
-        var h = new HandleBinlogEvents();
-        h.tableMap(tableMapEvent3);
+        var h = new HandleBinlogEvents(getTestBinlogName, getTestBinlogNextPos);
+        h.handleTableMap(tableMapEvent3);
         var output = h.filterUpdateRows(updateRowsEvent3);
         assert((output.length === 0), 'output should be empty.');
     });
@@ -432,8 +436,8 @@ describe('test HandleBinlogEvents persistence functions', function () {
     });
 
     it('test handleWriteRows()', function (done) {
-        var h = new HandleBinlogEvents();
-        h.tableMap(tableMapEvent1);
+        var h = new HandleBinlogEvents(getTestBinlogName, getTestBinlogNextPos);
+        h.handleTableMap(tableMapEvent1);
         h.handleWriteRows(db, writeRowsEvent1, function (err) {
             var collection = db.collection('MC-test-table1');
             collection.find().toArray(function (err, output) {
@@ -466,13 +470,13 @@ describe('test HandleBinlogEvents persistence functions', function () {
     });
 
     it('test handleUpdateRows()', function (done) {
-        var h = new HandleBinlogEvents();
-        h.tableMap(tableMapEvent1);
+        var h = new HandleBinlogEvents(getTestBinlogName, getTestBinlogNextPos);
+        h.handleTableMap(tableMapEvent1);
         h.handleWriteRows(db, writeRowsEvent1, function (err) {
             // there should now be some entries in 'MC-test-table1' 
             // and 'result-MC-test-table1'
 
-            h.tableMap(tableMapEvent2);
+            h.handleTableMap(tableMapEvent2);
             h.handleUpdateRows(db, updateRowsEvent2);
             
             // wait 200 msec for updates to MongoDb to complete
@@ -517,13 +521,13 @@ describe('test HandleBinlogEvents persistence functions', function () {
     });
 
     it('test handleDeleteRows()', function (done) {
-        var h = new HandleBinlogEvents();
-        h.tableMap(tableMapEvent1);
+        var h = new HandleBinlogEvents(getTestBinlogName, getTestBinlogNextPos);
+        h.handleTableMap(tableMapEvent1);
         h.handleWriteRows(db, writeRowsEvent1, function (err) {
             // there should now be some entries in 'MC-test-table1' 
             // and 'result-MC-test-table1'
 
-            h.tableMap(tableMapEvent4);
+            h.handleTableMap(tableMapEvent4);
             h.handleDeleteRows(db, deleteRowsEvent4);
             
             // wait 200 msec for updates to MongoDb to complete

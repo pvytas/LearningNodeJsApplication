@@ -20,28 +20,23 @@ var HandleBinlogEvents = require ('../handleBinlogEvents');
 var MongoClient = require('mongodb').MongoClient;
 var testConfig = require('./testConfig');
 
-var h  = new HandleBinlogEvents();
+var h  = new HandleBinlogEvents(testConfig);
 var db = {};
 
 mysqlReplication.init(
 // Pass the connection settings
         testConfig.mysqlDsn,
         
-// Pass the options
-// Must include rotate events for binlogName and binlogNextPos properties
-        {
-            includeEvents: ['rotate', 'tablemap', 'writerows', 'updaterows', 'deleterows'],
-            binlogName: 'mysql-bin.000001',
-            binlogNextPos: 154,
-            includeSchema: {'db_mediportal': true}
-        },
+// Pass the zongji options
+        testConfig.zongjiOptions,
+        
 // Callback each time that Binlog event is received.
         function (event) {
 //            console.log("+++++Inside binlog event++++");
 //            event.dump();
             switch (event.getTypeName()) {
                 case 'TableMap':
-                  h.tableMap(event);
+                  h.handleTableMap(event);
                   break;
                   
                 case 'WriteRows':
@@ -54,6 +49,10 @@ mysqlReplication.init(
                   
                 case 'DeleteRows':
                   h.handleDeleteRows (db, event);
+                  break;
+
+                case 'Rotate':
+                  h.handleRotate (event);
                   break;
                   
                 default:

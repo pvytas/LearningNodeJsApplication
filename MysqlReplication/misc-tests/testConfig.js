@@ -21,6 +21,18 @@ module.exports = {
         user: 'zongji',
         password: 'zongji'
     },
+
+    zongjiOptions: {
+        // Must include rotate events for updating binlogName and binlogNextPos properties
+        includeEvents: ['rotate', 'tablemap', 'writerows', 'updaterows', 'deleterows'],
+        
+        // binlog name and position are updated as events are processed 
+        // by handleBinlogEvents(). This is to support restarting replication.
+        binlogName: 'mysql-bin.000001',
+        binlogNextPos: 154,
+        includeSchema: {'db_mediportal': true}
+    },
+    
     mongoUrl: "mongodb://localhost:27017/exampleDb"
 };
 

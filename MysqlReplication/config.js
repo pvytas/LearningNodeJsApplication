@@ -17,7 +17,7 @@ var mysqlDsn = {
     };
 
 module.exports = {
-
+    
     mongoUrl: 'mongodb://localhost/mean-dev',
     replicationServerPort: 7000,
     replicationRunning: false,
@@ -30,6 +30,14 @@ module.exports = {
         mysqlDsn.port = newDsn.port;
         mysqlDsn.user = newDsn.userName;
         mysqlDsn.password = newDsn.password;
+    },
+    
+    zongjiOptions: {
+        // Must include rotate events for updating binlogName and binlogNextPos properties
+        includeEvents: ['rotate', 'tablemap', 'writerows', 'updaterows', 'deleterows'],
+        binlogName: 'mysql-bin.000001',
+        binlogNextPos: 154,
+        includeSchema: {'db_mediportal': true}
     }
 };
 

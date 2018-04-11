@@ -132,5 +132,17 @@ exports.stop = function () {
     return state.options;
 };
 
+/*
+ * getBinlogName, getBinlogNextPos - returns current location in MySQL binlog
+ * so that replication can be persisted to MongoDB should Bitnobi be stopped 
+ * then later restarted without missing or duplicating data.
+ */
+exports.getBinlogName = function () {
+    if (state.zongji) return state.zongji.binlogName;
+    else return '';
+};
 
-
+exports.getBinlogNextPos = function () {
+    if (state.zongji) return state.zongji.binlogNextPos;
+    else return '';
+};

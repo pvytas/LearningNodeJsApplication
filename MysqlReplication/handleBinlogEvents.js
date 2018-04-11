@@ -18,15 +18,20 @@
 
 var PersistenceSpecs = require ("./persistenceSpecs");
 
-function HandleBinlogEvents () {
+var REPLICATION_STATE_COLLECTION_NAME = 'MysqlReplicationState';
+
+
+function HandleBinlogEvents (functionGetBinlogName, functionGetBinlogNextPos) {
+    this.getBinlogName = functionGetBinlogName;
+    this.getBinlogNextPos = functionGetBinlogNextPos;
 };
 
-HandleBinlogEvents.prototype.tableMap = function (event) {
-  
+HandleBinlogEvents.prototype.handleTableMap = function (event) { 
     // fetch specifications of which columns to persist for target schema and table.
     this.persistenceSpecs = new PersistenceSpecs (event.schemaName, 
         event.tableName);
 };
+
 
 HandleBinlogEvents.prototype.getMongoCollectionName = function () {
     return this.persistenceSpecs.getMongoCollectionName();
@@ -96,7 +101,7 @@ HandleBinlogEvents.prototype.filterWriteRows = function (event) {
  * 
  */
 
-function formatDWAttr(row) {
+function formatDWAttr (row) {
      var output = {
         'data': row,
         'startDate': new Date(),
@@ -151,7 +156,7 @@ function formatDWAttrArray (rows) {
  * 
  */
  
-function formatResultAttr(row) {
+function formatResultAttr (row) {
     var output = {
         'ownerId': 'MC',
         'dateAdded': new Date(),
@@ -197,8 +202,28 @@ HandleBinlogEvents.prototype.persistWriteRows = function (db, data, rsData, cb) 
     
     var rsCollection = db.collection('result-' + collectionName);
     rsCollection.insert(rsData, {w:1}, function(err, result) {
-        if (!(cb === undefined)) cb(err);
+        if (cb !== undefined) cb(err);
     });
+};
+
+/*
+ * 
+ * @param {type} db
+ * @returns {undefined}
+ */
+HandleBinlogEvents.prototype.persistBinlogState = function (db, cb) {
+    var collection = db.collection(REPLICATION_STATE_COLLECTION_NAME);
+
+    var binlogStateData = {
+        binlogName: this.getBinlogName(),
+        binlogNextPos: this.getBinlogNextPos()
+    };
+
+    collection.updateOne({}, binlogStateData, {upsert: true, w: 1},
+            function (err, result) {
+                if (!(cb === undefined))
+                    cb(err);
+            });
 };
 
 /*
@@ -213,10 +238,16 @@ HandleBinlogEvents.prototype.handleWriteRows = function (db, event, cb) {
     var filteredData = this.filterWriteRows(event);
     var dwData = formatDWAttrArray(filteredData);
     var rsData = formatResultAttrArray(filteredData);
-
-    this.persistWriteRows(db, dwData, rsData, function(err, result) {
-        if (!(cb === undefined)) cb(err);
-    });   
+    var self = this;
+    
+    this.persistWriteRows(db, dwData, rsData, function (err, result) {
+        if (filteredData.length > 0) {
+            self.persistBinlogState(db, function (err) {
+                if (!(cb === undefined))
+                    cb(err);
+            });
+        }
+    });
 };
 
 
@@ -281,45 +312,45 @@ HandleBinlogEvents.prototype.filterUpdateRows = function (event) {
 
 
 HandleBinlogEvents.prototype.persistUpdateRows = function (db, dwData, rsData) {
-    if ((!dwData) || dwData.length === 0) return;   
+    if ((!dwData) || dwData.length === 0)
+        return;
     var dwCollectionName = this.persistenceSpecs.getMongoCollectionName();
-    if (!dwCollectionName) return;
-    
+    if (!dwCollectionName)
+        return;
+
     var dwCollection = db.collection(dwCollectionName);
     var primaryKey = this.persistenceSpecs.getPrimaryKey();
-    
+
 // if there are multiple rows in the update event, they must be for the
 // same schema and table.
-    dwData.forEach (function (row) {
+    dwData.forEach(function (row) {
         // find the existing row with the matching primary key value
         // and mark it as expired by setting the endDate to the new
         // row's startDate.
         var query = {};
         query['data.'.concat(primaryKey)] = row.data[primaryKey];
         query.endDate = PersistenceSpecs.getSurrogateHighDate();
-        
-        dwCollection.update (query, {$set: {endDate: row.startDate}}, 
-            function(err, result) {
-                if (err) {
-                    console.log(err.message);
-                }
-            });
-    
+
+        dwCollection.update(query, {$set: {endDate: row.startDate}},
+                function (err, result) {
+                    if (err)
+                        console.log(err.message);
+                });
+
         // insert the new row into the collection
-        dwCollection.insert(row, {w:1}, function(err, result) {
-                if (err) {
-                    console.log(err.message);
-                }
-            });
+        dwCollection.insert(row, {w: 1}, function (err, result) {
+            if (err)
+                console.log(err.message);
+        });
     });
-    
+
     var rsCollection = db.collection('result-' + dwCollectionName);
-    rsData.forEach (function (row) {
+    rsData.forEach(function (row) {
         // in the results-xx collection, replace the contents of the 
         // existing row matching the primary key with the new row
         var query = {};
         query['data.'.concat(primaryKey)] = row.data[primaryKey];
-        rsCollection.replaceOne (query, row);
+        rsCollection.replaceOne(query, row);
     });
 };
 
@@ -338,6 +369,11 @@ HandleBinlogEvents.prototype.handleUpdateRows = function (db, event) {
     var rsData = formatResultAttrArray(filteredData);
 
     this.persistUpdateRows(db, dwData, rsData);
+    var self = this;
+    
+    if (filteredData.length > 0) {
+        self.persistBinlogState(db, function (err) { });
+    }
 };
 
 
@@ -391,6 +427,11 @@ HandleBinlogEvents.prototype.handleDeleteRows = function (db, event) {
     var rsData = formatResultAttrArray(filteredData);
 
     this.persistDeleteRows(db, dwData, rsData);
+    
+    var self = this;
+    if (filteredData.length > 0) {
+        self.persistBinlogState(db, function (err) { });
+    }
 };
 
 
@@ -399,5 +440,6 @@ module.exports.formatDWAttr = formatDWAttr;
 module.exports.formatDWAttrArray = formatDWAttrArray;
 module.exports.formatResultAttr = formatResultAttr;
 module.exports.formatResultAttrArray = formatResultAttrArray;
+
 
 

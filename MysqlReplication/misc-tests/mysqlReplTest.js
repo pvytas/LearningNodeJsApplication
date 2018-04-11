@@ -18,30 +18,42 @@
 
 var mysqlReplication = require('../mysqlReplication');
 var testConfig = require('./testConfig');
+var binlogName = '';
+
+
 
 mysqlReplication.init(
         
 // Pass the connection settings
         testConfig.mysqlDsn,
         
-// Pass the options
-// Must include rotate events for binlogName and binlogNextPos properties
-        {
-            includeEvents: ['rotate', 'tablemap', 'writerows', 'updaterows', 'deleterows'],
-            binlogName: 'mysql-bin.000001',
-            binlogNextPos: 154,
-            includeSchema: {'db_mediportal': true}
-        },
+// Pass the zongji options
+        testConfig.zongjiOptions,
+        
 // Callback each time that Binlog event is received.
         function (event) {
             console.log("+++++Inside binlog event++++");
-            event.dump();
+            var type = event.getTypeName();
+            console.log('event type=%s', type);
+
+            if (type==='Rotate') {
+                binlogName = event.binlogName;
+            }
+            
+            if ((type==='WriteRows') || (type==='UpdateRows') || (type==='DeleteRows')) {
+                console.log('binlogName=%s', binlogName);
+                console.log('binlogNextPos=%s', event.nextPosition);
+            }
+
+//            event.dump();
         });
 
 
 process.on('SIGINT', function () {
     console.log('Got SIGINT.');
     mysqlReplication.stop();
+    console.log('BinlogName=%s', mysqlReplication.getBinlogName());
+    console.log('BinlogNextPos=%s', mysqlReplication.getBinlogNextPos());
     process.exit();
 });
 
