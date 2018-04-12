@@ -13,14 +13,12 @@
 
 'use strict';
 
-var mysql = require('mysql');
-
 var Q = require('q');
 var mysql = require('mysql');
 var MongoClient = require('mongodb').MongoClient;
 var LoadFromMysql = require('./loadFromMysql');
-var config = require('./config');
-var PersistenceSpecs = require ('./persistenceSpecs');
+var config = require('./testConfig');
+var PersistenceSpecs = require ('../persistenceSpecs');
 
 var toggle = 1;
 
@@ -77,14 +75,15 @@ function testConnection() {
     console.log('using DSN settings:');
     console.log(JSON.stringify(config.getMysqlDsn()));
 
-    var connection = mysql.createConnection(config.getMysqlDsn());
-
-    connection.connect(function (err) {
-        if (err)
-            deferred.reject(JSON.stringify(err));
-        else
+    setTimeout(function () {
+        if (toggle === 1) {
+            toggle = 0;
+            deferred.reject('connection failed');            
+        } else {
+            toggle = 1;
             deferred.resolve('connection succeeded');
-    });
+        }
+    }, 3000);
 
     return deferred.promise;
 }

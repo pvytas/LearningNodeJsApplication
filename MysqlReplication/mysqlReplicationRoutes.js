@@ -35,26 +35,28 @@ module.exports = function () {
         if (body.type) {
             switch (body.type) {
                 case 'loadInitialTables':
-                    MysqlReplicationController.loadInitialTables().then(function () {
+                    if ((req.body.ip) && (req.body.ip.length > 0)) 
+                        config.setMysqlDsn(req.body);
+                    
+                    MysqlReplicationController.loadInitialTables().then(function (resolveMsg) {
                         res.jsonp({
                             polling: config.replicationRunning,
                             retrying: config.retrying,
-                            msg: 'Initial tables loaded.'
+                            msg: resolveMsg
                         });
                     }).catch(function (err) {
                         res.status(400).send({
                             polling: config.replicationRunning,
                             retrying: config.retrying,
-                            msg: 'Retrying connection',
+                            msg: 'Failed to load tables',
                             error: err
                         });
                     });
                     break;
 
                 case 'start':
-                    if ((req.body.ip) && (req.body.ip.length > 0)) {
-                        config.setMysqlDsn(req.body);
-                    }
+                    if ((req.body.ip) && (req.body.ip.length > 0)) 
+                        config.setMysqlDsn(req.body);                    
 
                     MysqlReplicationController.startReplication().then(function () {
                         res.jsonp({
@@ -70,7 +72,26 @@ module.exports = function () {
                             error: err
                         });
                     });
+                    break;
 
+                case 'testConnection':
+                    if ((req.body.ip) && (req.body.ip.length > 0)) 
+                        config.setMysqlDsn(req.body);                    
+
+                    MysqlReplicationController.testConnection().then(function () {
+                        res.jsonp({
+                            polling: config.replicationRunning,
+                            retrying: config.retrying,
+                            msg: 'Connection successful.'
+                        });
+                    }).catch(function (err) {
+                        res.status(400).send({
+                            polling: config.replicationRunning,
+                            retrying: config.retrying,
+                            msg: 'Connection failed.',
+                            error: err
+                        });
+                    });
                     break;
 
                 case 'stop':
@@ -96,7 +117,7 @@ module.exports = function () {
                     res.jsonp({
                         polling: config.replicationRunning,
                         retrying: config.retrying,
-                        msg: [ 'message line 1.', 'message line 2.', 'message line 3.'],
+                        msg: 'message line 1. \nmessage line 2. \nmessage line 3.',
                         error: 'error message'
                     });
                     break;
