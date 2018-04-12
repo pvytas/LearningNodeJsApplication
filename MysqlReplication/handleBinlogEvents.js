@@ -18,12 +18,47 @@
 
 var PersistenceSpecs = require ("./persistenceSpecs");
 
-var REPLICATION_STATE_COLLECTION_NAME = 'MysqlReplicationState';
 
 
 function HandleBinlogEvents (functionGetBinlogName, functionGetBinlogNextPos) {
     this.getBinlogName = functionGetBinlogName;
     this.getBinlogNextPos = functionGetBinlogNextPos;
+};
+
+
+var REPLICATION_STATE_COLLECTION_NAME = 'MysqlReplicationState';
+
+
+/*
+ * persists binlog state to a MongoDB collection
+ * 
+ * @param {type} db
+ * @returns {undefined}
+ */
+HandleBinlogEvents.prototype.persistBinlogState = function (db, cb) {
+    var collection = db.collection(REPLICATION_STATE_COLLECTION_NAME);
+
+    var binlogStateData = {
+        binlogName: this.getBinlogName(),
+        binlogNextPos: this.getBinlogNextPos()
+    };
+
+    collection.updateOne({}, binlogStateData, {upsert: true, w: 1},
+            function (err, result) {
+                if (cb !== undefined)
+                    cb(err);
+            });
+};
+
+HandleBinlogEvents.prototype.fetchBinlogState = function (db, output, cb) {
+    var collection = db.collection(REPLICATION_STATE_COLLECTION_NAME);
+
+    collection.find().toArray(function (err, resultArray) {
+        output.binlogName = resultArray[0].binlogName;
+        output.binlogNextPos = resultArray[0].binlogNextPos;
+        if (cb !== undefined)
+            cb(err);
+    });
 };
 
 HandleBinlogEvents.prototype.handleTableMap = function (event) { 
@@ -204,26 +239,6 @@ HandleBinlogEvents.prototype.persistWriteRows = function (db, data, rsData, cb) 
     rsCollection.insert(rsData, {w:1}, function(err, result) {
         if (cb !== undefined) cb(err);
     });
-};
-
-/*
- * 
- * @param {type} db
- * @returns {undefined}
- */
-HandleBinlogEvents.prototype.persistBinlogState = function (db, cb) {
-    var collection = db.collection(REPLICATION_STATE_COLLECTION_NAME);
-
-    var binlogStateData = {
-        binlogName: this.getBinlogName(),
-        binlogNextPos: this.getBinlogNextPos()
-    };
-
-    collection.updateOne({}, binlogStateData, {upsert: true, w: 1},
-            function (err, result) {
-                if (!(cb === undefined))
-                    cb(err);
-            });
 };
 
 /*
@@ -440,6 +455,6 @@ module.exports.formatDWAttr = formatDWAttr;
 module.exports.formatDWAttrArray = formatDWAttrArray;
 module.exports.formatResultAttr = formatResultAttr;
 module.exports.formatResultAttrArray = formatResultAttrArray;
-
+module.exports.REPLICATION_STATE_COLLECTION_NAME = REPLICATION_STATE_COLLECTION_NAME;
 
 

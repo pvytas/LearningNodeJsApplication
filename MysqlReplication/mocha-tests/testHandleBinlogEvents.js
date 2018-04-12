@@ -5,10 +5,9 @@
 var assert = require("assert");
 var PersistenceSpecs = require ('../persistenceSpecs');
 var HandleBinlogEvents = require ('../handleBinlogEvents');
+var testConfig = require('./testConfig');
 var _ = require('lodash');
 
-function getTestBinlogName () { return 'mysql-bin.123456'; };
-function getTestBinlogNextPos () { return 123456; };
 
 
 var testSpecs = [
@@ -421,16 +420,27 @@ var MongoClient = require('mongodb').MongoClient;
 var db;
 // Connect to the db
 
+var binlogName = 'mysql-bin.123456';
+var binlogNextPos = 123456;
+function getTestBinlogName () { return binlogName; };
+function getTestBinlogNextPos () { return binlogNextPos; };
+
 
 describe('test HandleBinlogEvents persistence functions', function () {
 // before running these tests, open a mongodb connection.
     before(function (done) {
-        MongoClient.connect("mongodb://localhost:27017/binlog-test", function (err, new_db) {
+        MongoClient.connect(testConfig.mongoUrl, function (err, new_db) {
             if (err) {
                 return console.dir(err);
             }
 
             db = new_db;
+            
+            //clean test collections just in case.
+            var collection = db.collection('MC-test-table1');
+            collection.drop();
+            var rsCollection = db.collection('result-MC-test-table1');
+            rsCollection.drop();
             done();
         });
     });
@@ -569,7 +579,38 @@ describe('test HandleBinlogEvents persistence functions', function () {
         }, 200);
     });
 
-
+    it('test persistBinlogState()', function (done) {
+        var h = new HandleBinlogEvents(getTestBinlogName, getTestBinlogNextPos);
+        binlogName = 'mysql-bin.111111';
+        binlogNextPos = 111111;
+        h.persistBinlogState(db, function (err) {
+            assert(!err, "unexpected error" + err);
+            // there should now be one entry in REPLICATION_STATE_COLLECTION_NAME 
+            var collection = db.collection(HandleBinlogEvents.REPLICATION_STATE_COLLECTION_NAME);
+            collection.find().toArray(function (err, resultArray) {
+                assert.equal(resultArray.length, 1,
+                        "Expecting one entry in ReplicationState collection but found " + resultArray.length);
+                assert.equal(resultArray[0].binlogName, binlogName, "BinlogName not matching.");
+                assert.equal(resultArray[0].binlogNextPos, binlogNextPos, "BinlogNextPos not matching.");
+                done();
+            });
+        });
+    });
+    
+    it('test fetchBinlogState()', function (done) {
+        var h = new HandleBinlogEvents(getTestBinlogName, getTestBinlogNextPos);
+        binlogName = 'mysql-bin.222222';
+        binlogNextPos = 222222;
+        h.persistBinlogState(db, function (err) {
+            assert(!err, "unexpected error" + err);
+            var result = {};
+            h.fetchBinlogState(db, result, function (err) {
+                assert.equal(result.binlogName, binlogName, "BinlogName not matching.");
+                assert.equal(result.binlogNextPos, binlogNextPos, "BinlogNextPos not matching.");
+                done();
+            });
+        });
+    });
 
     //After all tests are finished close the database connection.
     after(function (done) {
