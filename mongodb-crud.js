@@ -41,17 +41,20 @@ MongoClient.connect("mongodb://localhost:27017/exampleDb", function(err, db) {
     ];
 
     collection.insert(expectedOutput1, {w:1}, function(err, result) {
+        console.log('result=\n%s\n', JSON.stringify(result));
+        console.log('_id for record 0=%s\n', result.ops[0]._id.toString());
+
         var primaryKey = 'id';
 
         var row = { data: {id: '2', column1: 'update', column2: 'c7' },
         startDate: new Date(),
         endDate: new Date(9999, 5, 24, 11, 33, 30, 0) };
-        console.log ('row=', row);
+        console.log ('row=%s\n', row);
 
         var query = {};
         query['data.'.concat(primaryKey)] = row.data[primaryKey];
         query.endDate = new Date(9999, 5, 24, 11, 33, 30, 0);
-        console.log ('query=', query);
+        console.log ('query=%s\n', query);
 
         collection.update (query, {$set: {endDate: row.startDate}}, 
             function(err, result) {
